@@ -8,7 +8,9 @@ from formcheck.pipeline import analyze_image
 
 def test_no_key_report_keeps_fine_grained_timings(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr("formcheck.pipeline.OUT_DIR", tmp_path / "out")
-    monkeypatch.delenv("PADDLEOCR_AISTUDIO_TOKEN", raising=False)
+    monkeypatch.setenv("PADDLEOCR_AISTUDIO_TOKEN", "")
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "")
+    monkeypatch.setenv("ALIYUN_API_KEY", "")
     image = tmp_path / "upload.jpg"
     cv2.imwrite(str(image), np.full((30, 40, 3), 255, dtype=np.uint8))
 

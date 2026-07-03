@@ -46,8 +46,8 @@ copy .env.example .env
 
 - `PADDLEOCR_AISTUDIO_TOKEN`：调用 PaddleOCR AI Studio `PP-OCRv6`。
 - `SILICONFLOW_API_KEY`：DeepSeek cleaner，默认模型 `deepseek-ai/DeepSeek-V4-Flash`。
-- `ALIYUN_API_KEY`：ROI 级视觉复核，默认模型 `qwen3.7-plus`。
-- `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型。
+- `ALIYUN_API_KEY`：ROI 级视觉复核，默认建议使用图像 OCR 模型 `qwen3.5-ocr`。
+- `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型；若主模型超时或报错，可通过 `ROI_REVIEW_FALLBACK_MODEL` 自动降级。
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
 - `CLEANER_REQUEST_TIMEOUT_SECONDS` / `ISSUE_TRIAGE_TIMEOUT_SECONDS`：Cleaner 与问题终裁超时，默认 `45`。
 - `ISSUE_DISPLAY_LIMIT`：右侧展示问题数量上限，默认 `4`；`all_problems` 不受影响。

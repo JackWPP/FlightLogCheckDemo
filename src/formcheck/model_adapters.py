@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
 import requests
 
 from .config import provider_config
@@ -13,8 +15,27 @@ from .schemas import FieldSpec, RecognitionResult
 
 
 def _image_data_url(path: Path) -> str:
-    payload = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:image/png;base64,{payload}"
+    payload = image_payload(path)
+    return f"data:image/png;base64,{base64.b64encode(payload).decode('ascii')}"
+
+
+def image_payload(path: Path) -> bytes:
+    max_side = max_image_side()
+    with Image.open(path) as image:
+        image = image.convert("RGB")
+        if max(image.size) > max_side:
+            image.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG", optimize=True)
+        return buffer.getvalue()
+
+
+def max_image_side() -> int:
+    try:
+        value = int(os.getenv("VLM_IMAGE_MAX_SIDE", "900"))
+    except ValueError:
+        return 900
+    return max(320, min(value, 1600))
 
 
 def build_prompt(field: FieldSpec) -> str:

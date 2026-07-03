@@ -12,7 +12,7 @@ import numpy as np
 
 from .config import CANONICAL_DIR, FIELDS_PATH, OUT_DIR
 from .crop import crop_roi, save_rois
-from .field_assignment import assign_blocks_to_fields, candidates_to_json, scale_bbox
+from .field_assignment import assign_blocks_to_fields, candidates_to_json, estimate_ocr_page_size, scale_bbox
 from .fields import load_fields
 from .image_io import imread, imwrite
 from .issue_triage import triage_issues
@@ -137,10 +137,7 @@ def analyze_image(
         else:
             recognition = ocr_meta["cleaned_results"].get(field.id)
             if not recognition or not (recognition.value or recognition.normalized_value):
-                if roi_path:
-                    recognition = recognize_with_provider(field, roi_path, provider, model)
-                else:
-                    recognition = unresolved_result(field, "无可靠OCR候选，且未生成可用ROI")
+                recognition = recognition or unresolved_result(field, "无可靠OCR候选，等待ROI复核")
         passed, msg = validate(field, recognition)
         checks.append(FieldCheck(
             field, recognition, passed, msg,
@@ -305,6 +302,7 @@ def run_hybrid_ocr(
         "cleaned_results": cleaned,
         "public": public,
         "ocr_image_path": ocr_image_path,
+        "blocks": blocks,
         "assignments": assignments,
     }
 
@@ -314,12 +312,21 @@ def build_ppocr_roi_evidence(ocr_meta: dict, fields: list[FieldSpec], canonical:
     if not ocr_image_path:
         return {}
     image = imread(ocr_image_path)
+    blocks = ocr_meta.get("blocks") or []
+    page_size = estimate_ocr_page_size(blocks, (canonical["width"], canonical["height"])) if blocks else None
     out_dir = run_dir / "ppocr_rois"
     out_dir.mkdir(parents=True, exist_ok=True)
     assignments = ocr_meta.get("assignments") or {}
     paths: dict[str, Path] = {}
     for field in fields:
-        bbox = ppocr_evidence_bbox(field, assignments.get(field.id, []), image.shape[1], image.shape[0], canonical)
+        bbox = ppocr_evidence_bbox(
+            field,
+            assignments.get(field.id, []),
+            image.shape[1],
+            image.shape[0],
+            canonical,
+            page_size=page_size,
+        )
         roi = crop_roi(image, bbox, pad=10)
         path = out_dir / f"{field.id}.png"
         imwrite(path, roi)
@@ -333,18 +340,77 @@ def ppocr_evidence_bbox(
     width: int,
     height: int,
     canonical: dict[str, int],
+    page_size: tuple[float, float] | None = None,
 ) -> tuple[int, int, int, int]:
+    page_width, page_height = page_size or (float(width), float(height))
+    base_bbox = scaled_field_bbox(field, page_width, page_height, canonical)
+    if field.assignment.get("roi_review_always") or field.assignment.get("roi_review") or field.assignment.get("prefer_roi_vlm"):
+        return ocr_bbox_to_image_bbox(expand_xyxy(base_bbox, roi_review_expand_ratio(field)), width, height, page_width, page_height)
     candidate_boxes = [candidate.block.box for candidate in candidates[:4]]
     if candidate_boxes:
         x1 = min(box[0] for box in candidate_boxes)
         y1 = min(box[1] for box in candidate_boxes)
         x2 = max(box[2] for box in candidate_boxes)
         y2 = max(box[3] for box in candidate_boxes)
-        return clamp_xyxy(expand_xyxy((x1, y1, x2, y2), 0.55), width, height)
+        return ocr_bbox_to_image_bbox(expand_xyxy((x1, y1, x2, y2), 0.55), width, height, page_width, page_height)
+    return ocr_bbox_to_image_bbox(expand_xyxy(base_bbox, 0.35), width, height, page_width, page_height)
+
+
+def scaled_field_bbox(
+    field: FieldSpec,
+    width: float,
+    height: float,
+    canonical: dict[str, int],
+) -> tuple[float, float, float, float]:
     scale_x = width / max(float(canonical["width"]), 1.0)
     scale_y = height / max(float(canonical["height"]), 1.0)
     base = tuple(field.assignment.get("search_bbox") or field.bbox)
-    return clamp_xyxy(expand_xyxy(scale_bbox(base, scale_x, scale_y), 0.35), width, height)
+    return scale_bbox(base, scale_x, scale_y)
+
+
+def roi_review_expand_ratio(field: FieldSpec) -> float:
+    if "roi_expand" in field.assignment:
+        try:
+            return max(0.0, min(float(field.assignment["roi_expand"]), 0.6))
+        except (TypeError, ValueError):
+            return 0.12
+    if field.assignment.get("value_type") == "numeric" or field.validator in {"digit_length", "int_range"}:
+        return 0.08
+    return 0.25
+
+
+def ocr_bbox_to_image_bbox(
+    bbox: tuple[float, float, float, float],
+    image_width: int,
+    image_height: int,
+    page_width: float,
+    page_height: float,
+) -> tuple[int, int, int, int]:
+    region_x, region_y, region_width, region_height = ppocr_visual_page_region(image_width, image_height, page_width, page_height)
+    scale_x = region_width / max(page_width, 1.0)
+    scale_y = region_height / max(page_height, 1.0)
+    x1, y1, x2, y2 = bbox
+    mapped = (
+        region_x + x1 * scale_x,
+        region_y + y1 * scale_y,
+        region_x + x2 * scale_x,
+        region_y + y2 * scale_y,
+    )
+    return clamp_xyxy(mapped, image_width, image_height)
+
+
+def ppocr_visual_page_region(
+    image_width: int,
+    image_height: int,
+    page_width: float,
+    page_height: float,
+) -> tuple[float, float, float, float]:
+    page_aspect = page_width / max(page_height, 1.0)
+    left_width = image_width / 2.0
+    left_aspect = left_width / max(float(image_height), 1.0)
+    if image_width >= image_height * 2 and abs(left_aspect - page_aspect) < 0.35:
+        return 0.0, 0.0, left_width, float(image_height)
+    return 0.0, 0.0, float(image_width), float(image_height)
 
 
 def expand_xyxy(bbox: tuple[float, float, float, float], ratio: float) -> tuple[float, float, float, float]:
@@ -437,7 +503,7 @@ def roi_review_field(
         original.needs_review = True
         original.review_reason = original.review_reason or "缺少ROI复核图"
         return original, original_passed, original_msg
-    reviewed = recognize_with_provider(field, review_path, provider, model)
+    reviewed = recognize_roi_with_fallback(field, review_path, provider, model)
     reviewed.provider = f"roi-vlm:{reviewed.provider}"
     reviewed.raw = {
         "roi_review": {
@@ -469,6 +535,41 @@ def roi_review_field(
     original.needs_review = True
     original.review_reason = original.review_reason or "ROI复核未通过"
     return original, original_passed, original_msg
+
+
+def recognize_roi_with_fallback(field: FieldSpec, review_path: Path, provider: str, model: str | None) -> RecognitionResult:
+    reviewed = recognize_with_provider(field, review_path, provider, model)
+    if not roi_review_should_fallback(reviewed, provider, model):
+        return reviewed
+    fallback_model = roi_review_fallback_model(provider, model)
+    fallback = recognize_with_provider(field, review_path, provider, fallback_model)
+    fallback.raw = {
+        "primary": recognition_dict_for_raw(reviewed),
+        "primary_raw": reviewed.raw,
+        "fallback_raw": fallback.raw,
+        "fallback_model": fallback_model,
+    }
+    return fallback
+
+
+def roi_review_should_fallback(reviewed: RecognitionResult, provider: str, model: str | None) -> bool:
+    if provider != "aliyun":
+        return False
+    if reviewed.value or reviewed.normalized_value:
+        return False
+    raw = reviewed.raw if isinstance(reviewed.raw, dict) else {}
+    if "error" not in raw:
+        return False
+    return bool(roi_review_fallback_model(provider, model))
+
+
+def roi_review_fallback_model(provider: str, model: str | None) -> str:
+    if provider != "aliyun":
+        return ""
+    fallback = os.getenv("ROI_REVIEW_FALLBACK_MODEL") or os.getenv("ALIYUN_MODEL") or "qwen3.5-ocr"
+    if model and fallback == model:
+        return ""
+    return fallback
 
 
 def expanded_bbox(bbox: tuple[int, int, int, int], width: int, height: int, ratio: float = 0.35) -> tuple[int, int, int, int]:

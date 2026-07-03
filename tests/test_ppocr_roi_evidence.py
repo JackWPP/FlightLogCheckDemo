@@ -3,7 +3,15 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from formcheck.pipeline import build_ppocr_roi_evidence, registration_mode, should_roi_review
+from formcheck.pipeline import (
+    build_ppocr_roi_evidence,
+    ocr_bbox_to_image_bbox,
+    ppocr_evidence_bbox,
+    ppocr_visual_page_region,
+    recognize_roi_with_fallback,
+    registration_mode,
+    should_roi_review,
+)
 from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock, RecognitionResult
 
 
@@ -67,3 +75,115 @@ def test_failed_numeric_fields_go_to_roi_review_even_without_value() -> None:
     recognition = RecognitionResult(value="", normalized_value="", provider="unresolved")
 
     assert should_roi_review(field, recognition, passed=False, mode="hybrid")
+
+
+def test_roi_review_fields_use_search_bbox_not_tight_candidate_box() -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="digit_length",
+        params={"allow_lengths": [4, 5]},
+        fail_msg="APU循环不是4或5位",
+        assignment={
+            "search_bbox": [690, 1660, 230, 124],
+            "value_type": "numeric",
+            "roi_review": True,
+            "roi_review_always": True,
+        },
+    )
+    block = OcrBlock(
+        id="b0243",
+        text="348",
+        score=0.9,
+        box=(410, 900, 455, 930),
+        center=(432.5, 915),
+    )
+    candidate = FieldCandidate(field.id, block, 1.0, "test")
+
+    x, y, w, h = ppocr_evidence_bbox(
+        field,
+        [candidate],
+        width=1200,
+        height=892,
+        canonical={"width": 2400, "height": 1784},
+        page_size=(2400, 1784),
+    )
+
+    assert 125 <= w <= 145
+    assert 55 <= h <= 70
+    assert 330 <= x <= 342
+    assert 820 <= y <= 836
+
+
+def test_ppocr_visual_page_region_uses_left_half_for_stitched_debug_image() -> None:
+    region = ppocr_visual_page_region(
+        image_width=2000,
+        image_height=750,
+        page_width=1339.52,
+        page_height=1003.6,
+    )
+
+    assert region == (0.0, 0.0, 1000.0, 750.0)
+
+
+def test_ocr_bbox_maps_to_left_half_of_ppocr_debug_image() -> None:
+    x, y, w, h = ocr_bbox_to_image_bbox(
+        (385.0, 933.0, 513.0, 1003.0),
+        image_width=2000,
+        image_height=750,
+        page_width=1339.52,
+        page_height=1003.6,
+    )
+
+    assert 280 <= x <= 300
+    assert 690 <= y <= 700
+    assert 90 <= w <= 105
+    assert 50 <= h <= 60
+
+
+def test_aliyun_roi_review_falls_back_to_ocr_model(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="digit_length",
+        params={"allow_lengths": [4, 5]},
+        fail_msg="APU循环不是4或5位",
+    )
+    roi_path = tmp_path / "roi.png"
+    roi_path.write_bytes(b"fake")
+    calls = []
+
+    def fake_recognize(field_arg, roi_path_arg, provider_arg, model_arg):
+        calls.append(model_arg)
+        if model_arg == "qwen3.7-plus":
+            return RecognitionResult(
+                value="",
+                normalized_value="",
+                confidence=0.0,
+                provider="aliyun",
+                model=model_arg,
+                raw={"error": "timeout"},
+            )
+        return RecognitionResult(
+            value="3481",
+            normalized_value="3481",
+            confidence=0.9,
+            provider="aliyun",
+            model=model_arg,
+            raw={"content": "{}"},
+        )
+
+    monkeypatch.setenv("ROI_REVIEW_FALLBACK_MODEL", "qwen3.5-ocr")
+    monkeypatch.setattr("formcheck.pipeline.recognize_with_provider", fake_recognize)
+
+    result = recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.7-plus")
+
+    assert calls == ["qwen3.7-plus", "qwen3.5-ocr"]
+    assert result.normalized_value == "3481"
+    assert result.raw["fallback_model"] == "qwen3.5-ocr"
