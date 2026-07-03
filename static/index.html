@@ -414,7 +414,7 @@
         const cleanerShort = String(cfg.cleaner_model || '').replace(/^deepseek-ai\//, '');
         const missing = Object.entries(cfg.keys_configured || {})
           .filter(([, ok]) => !ok).map(([k]) => k);
-        el.textContent = `OCR: PP-OCRv6 · Cleaner: ${cleanerShort} · ROI 复核: ${cfg.roi_provider}/${cfg.roi_model} · 配准: ${cfg.registration_mode}`
+        el.textContent = `OCR: PP-OCRv6 · Cleaner: ${cleanerShort} · ROI 复核: ${cfg.roi_provider}/${cfg.roi_model} · 配准: ${cfg.registration_mode} · OCR缓存: ${cfg.ppocr_cache_enabled ? 'on' : 'off'}`
           + (missing.length ? ` · ⚠ 缺 key: ${missing.join(', ')}` : '');
       } catch (e) {
         el.textContent = '配置加载失败';

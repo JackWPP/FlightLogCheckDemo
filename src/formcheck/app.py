@@ -64,6 +64,7 @@ def _public_config() -> dict:
         "roi_provider": os.getenv("ROI_REVIEW_PROVIDER", "aliyun"),
         "roi_model": os.getenv("ROI_REVIEW_MODEL", "qwen3.7-plus"),
         "registration_mode": registration_mode(),
+        "ppocr_cache_enabled": os.getenv("PPOCR_CACHE_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"},
         "keys_configured": keys,
         "ready_for_live_upload": all(keys.values()),
     }

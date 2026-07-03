@@ -52,6 +52,8 @@ def analyze_image(
     run_dir = OUT_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     canonical, fields = load_fields(FIELDS_PATH)
+    started_at = time.time()
+    timings: dict[str, int] = {}
 
     # --- Stage 1: OCR (PP-OCRv6 page recognition) --------------------------
     t = time.time()
@@ -64,7 +66,10 @@ def analyze_image(
     emit("ocr", ocr_status,
          duration_ms=int((time.time() - t) * 1000),
          blocks=blocks_count)
+    timings["ocr_ms"] = int((time.time() - t) * 1000)
+    t_roi = time.time()
     ppocr_roi_paths = build_ppocr_roi_evidence(ocr_meta, fields, canonical, run_dir)
+    timings["ppocr_roi_ms"] = int((time.time() - t_roi) * 1000)
 
     # --- Stage 2: optional registration for ROI evidence/fallback ----------
     reg = None
@@ -74,6 +79,7 @@ def analyze_image(
     reg_mode = registration_mode()
     if reg_mode == "off":
         emit("registration", "skipped", reason="REGISTRATION_MODE=off")
+        timings["registration_ms"] = 0
     else:
         t = time.time()
         emit("registration", "running", mode=reg_mode)
@@ -85,6 +91,7 @@ def analyze_image(
             emit("registration", "failed",
                  duration_ms=int((time.time() - t) * 1000),
                  reason=reg.reject_reason)
+            timings["registration_ms"] = int((time.time() - t) * 1000)
             if reg_mode == "required":
                 return {"ok": False, "error": reg.reject_reason, "registration": _reg_dict(reg, reg_mode)}
         else:
@@ -97,6 +104,7 @@ def analyze_image(
             warped_url = f"/runs/{run_id}/warped.png"
             roi_dir = run_dir / "rois"
             roi_paths = save_rois(warped, fields, roi_dir)
+            timings["registration_ms"] = int((time.time() - t) * 1000)
 
     # --- Stage 3: per-field validation (local rules) ----------------------
     t = time.time()
@@ -135,6 +143,7 @@ def analyze_image(
     emit("validate", "done",
          duration_ms=int((time.time() - t) * 1000),
          count=len(checks))
+    timings["validate_ms"] = int((time.time() - t) * 1000)
 
     # --- Stage 4: ROI-VLM review (prefer PaddleOCR ROI evidence) -----------
     needs_review = [
@@ -156,9 +165,11 @@ def analyze_image(
         emit("review", "done",
              duration_ms=int((time.time() - t) * 1000),
              total=len(needs_review))
+        timings["review_ms"] = int((time.time() - t) * 1000)
     else:
         reason = "no_roi_evidence" if warped is None and not ppocr_roi_paths else "no_fields"
         emit("review", "skipped", total=0, reason=reason)
+        timings["review_ms"] = 0
 
     # --- Build report ------------------------------------------------------
     field_dicts = [_check_dict(check) for check in checks]
@@ -170,6 +181,7 @@ def analyze_image(
         "registration": _reg_dict(reg, reg_mode),
         "warped_url": warped_url,
         "mode": mode,
+        "timings": {**timings, "total_ms": int((time.time() - started_at) * 1000)},
         "ocr": ocr_meta["public"],
         "fields": field_dicts,
     }
@@ -258,6 +270,7 @@ def run_hybrid_ocr(
         "candidates": candidates_json,
         "cleaner_provider": cleaner_provider,
         "cleaner_model": cleaner_model or DEFAULT_CLEANER_MODEL,
+        "cache_hit": bool(ppocr.get("cache_hit")),
     }
     return {
         "cleaned_results": cleaned,
@@ -341,11 +354,18 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
 
 
 def review_check(check: FieldCheck, run_dir: Path, evidence_path: Path | None, warped) -> FieldCheck:
-    new_rec, new_passed, new_msg = roi_review_field(
-        check.field, check.recognition, check.passed, check.message, run_dir,
-        evidence_path=evidence_path, warped=warped,
-    )
-    return FieldCheck(check.field, new_rec, new_passed, new_msg, check.roi_url)
+    try:
+        new_rec, new_passed, new_msg = roi_review_field(
+            check.field, check.recognition, check.passed, check.message, run_dir,
+            evidence_path=evidence_path, warped=warped,
+        )
+        return FieldCheck(check.field, new_rec, new_passed, new_msg, check.roi_url)
+    except Exception as exc:  # noqa: BLE001
+        rec = check.recognition
+        rec.needs_review = True
+        rec.review_reason = rec.review_reason or "ROI复核异常"
+        rec.raw = {**(rec.raw or {}), "roi_review_error": str(exc)}
+        return FieldCheck(check.field, rec, check.passed, check.message, check.roi_url)
 
 
 def roi_review_field(
@@ -497,6 +517,7 @@ def build_summary(fields: list[dict], ocr_public: dict) -> dict:
         "ocr_block_count": len(ocr_public.get("blocks") or []),
         "cleaner_model": ocr_public.get("cleaner_model"),
         "ocr_ok": ocr_public.get("ok"),
+        "ocr_cache_hit": ocr_public.get("cache_hit"),
     }
 
 

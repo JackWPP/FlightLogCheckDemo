@@ -48,6 +48,8 @@ copy .env.example .env
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型。
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
 - `REGISTRATION_MODE`：默认 `off`。可选 `optional` / `required`，只在需要旧版 SIFT 配准 ROI 时开启。
+- `PPOCR_CACHE_ENABLED`：默认 `1`。同一张图片、同一组 PP-OCR 参数会复用 `outputs/runtime/ocr_cache/`，避免反复提交云端 OCR。
+- `PPOCR_POLL_INTERVAL_SECONDS` / `PPOCR_MAX_WAIT_SECONDS`：控制 PaddleOCR 异步 job 轮询间隔和最大等待时间。
 
 说明：默认缓存示例不需要 key；只有上传新图并实时分析时才需要云端 key。
 
@@ -88,6 +90,8 @@ fields.yaml             字段、ROI、规则和候选归属配置
 - 失败字段：9
 - 需复核字段：8
 - APU 累计使用循环：主 OCR 读成 `348`，ROI-VLM 复核为 `3481` 后通过。
+
+上传新图的 `report.json` 会包含 `timings`，用于定位线上慢点，例如 `ocr_ms`、`ppocr_roi_ms`、`validate_ms`、`review_ms` 和 `total_ms`。`summary.ocr_cache_hit` 为 `true` 时表示本次整页 OCR 走缓存，没有重新访问 PaddleOCR 云端。
 
 ## 测试
 
