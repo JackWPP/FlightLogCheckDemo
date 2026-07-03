@@ -145,4 +145,4 @@ docker compose build && docker compose up -d
 ./deploy/deploy.sh backup   # 打包 out/ 和 outputs/
 ```
 
-默认监听 `:80`（通过 nginx），app 容器本身只在内部 `:8003`。HTTPS 模板在 `deploy/nginx.conf` 里，certbot 跑完把证书放到 `deploy/certs/` 再取消注释即可。
+默认监听 `:9080`（通过 nginx），app 容器本身只在内部 `:8003`。HTTPS 模板在 `deploy/nginx.conf` 里，certbot 跑完把证书放到 `deploy/certs/` 再取消注释并把端口改为 `443`。

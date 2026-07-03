@@ -6,7 +6,7 @@
 
 - **OS**：Ubuntu 22.04 / 24.04 LTS（其他发行版也行，命令略改）
 - **规格**：1 vCPU + 2 GB RAM 起步，2 vCPU + 4 GB RAM 更舒服
-- **网络**：放行 22 / 80 / 443；其他端口不要对外暴露
+- **网络**：放行 22 / 9080（或你自定义的端口）；其他端口不要对外暴露
 - **域名**（建议）：先 DNS A 记录指到服务器 IP，方便上 HTTPS
 
 ## 1. 装 Docker
@@ -60,10 +60,10 @@ docker compose ps              # 两个容器都是 healthy/Up
 
 ```bash
 # 看 demo 缓存（不调用云端）
-curl -fsS http://localhost/api/demo | head -c 200
+curl -fsS http://localhost:9080/api/demo | head -c 200
 
 # 跟健康检查同款端点
-curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost/api/demo
+curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:9080/api/demo
 # 期望：200
 
 # 看日志
@@ -87,10 +87,10 @@ sudo cp /etc/letsencrypt/live/your.domain.com/fullchain.pem /opt/flight-log-chec
 sudo cp /etc/letsencrypt/live/your.domain.com/privkey.pem   /opt/flight-log-check/deploy/certs/
 ```
 
-打开 `deploy/nginx.conf`，把底部 443 server 块的注释去掉，保存：
+打开 `deploy/nginx.conf`，把底部 443 server 块的注释去掉，**并把端口映射改成 `"443:443"`**（在 `docker-compose.yml`），保存后：
 
 ```bash
-docker compose restart nginx
+docker compose up -d --force-recreate nginx
 ```
 
 最后加一条自动续期（certbot 自带）：

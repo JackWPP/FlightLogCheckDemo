@@ -46,9 +46,10 @@ services:
     image: nginx:1.27-alpine
     container_name: flight-log-nginx
     restart: unless-stopped
+    # Single uncommon port. Pick something you don't already use locally.
+    # Change the left side too if 9080 is taken on the host: "18080:9080".
     ports:
-      - "80:80"
-      - "443:443"   # comment out if you don't want HTTPS yet
+      - "9080:9080"
     volumes:
       - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./deploy/certs:/etc/nginx/certs:ro
