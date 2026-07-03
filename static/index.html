@@ -146,6 +146,34 @@
       border-radius: 6px;
       padding: 8px;
     }
+    .progress-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .progress-list li {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fafbfc;
+      font-size: 13px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .progress-list li.pending { color: var(--muted); }
+    .progress-list li.running { background: #fff7e6; border-color: #f2d39b; }
+    .progress-list li.done    { background: #f3fbf7; border-color: #b8e2d1; }
+    .progress-list li.failed  { background: #fff4f2; border-color: #efc0ba; }
+    .progress-list li.skipped { background: #f4f6f8; border-color: var(--line); color: var(--muted); }
+    .progress-list .icon { font-size: 14px; text-align: center; }
+    .progress-list .label { font-weight: 600; }
+    .progress-list .meta { font-size: 12px; }
     @media (max-width: 1100px) {
       main { grid-template-columns: 1fr; }
       section { min-height: 380px; }
@@ -190,6 +218,28 @@
       <div class="section-head"><h2>核查结论</h2></div>
       <div class="side">
         <div id="status" class="status"><strong>未开始</strong><span class="meta">上传一张表单照片。</span></div>
+        <ol id="progress" class="progress-list hidden">
+          <li data-stage="registration" class="pending">
+            <span class="icon">⏳</span>
+            <span class="label">配准</span>
+            <span class="meta" data-label="SIFT/ORB 特征匹配">SIFT/ORB 特征匹配</span>
+          </li>
+          <li data-stage="ocr" class="pending">
+            <span class="icon">⏳</span>
+            <span class="label">整页 OCR</span>
+            <span class="meta" data-label="PP-OCRv6">PP-OCRv6</span>
+          </li>
+          <li data-stage="validate" class="pending">
+            <span class="icon">⏳</span>
+            <span class="label">规则校验</span>
+            <span class="meta" data-label="本地校验">本地校验</span>
+          </li>
+          <li data-stage="review" class="pending">
+            <span class="icon">⏳</span>
+            <span class="label">ROI 复核</span>
+            <span class="meta" data-label="阿里百炼 qwen">阿里百炼 qwen</span>
+          </li>
+        </ol>
         <ol id="problems" class="problem-list"></ol>
         <div class="evidence">
           <h3>字段证据</h3>
@@ -255,14 +305,114 @@
 
     uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (!fileInput.files[0]) return;
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
-      statusBox.innerHTML = '<strong>核查中</strong><span class="meta">正在配准、裁切和识别。</span>';
-      const response = await fetch('/api/analyze', { method: 'POST', body: formData });
-      lastReport = await response.json();
-      lastManifest = null;
-      render(lastReport);
+
+      // Reset UI for a new run.
+      showProgress();
+      statusBox.innerHTML = '<strong>核查中</strong><span class="meta">实时进度见下方。</span>';
+      fieldTable.innerHTML = '';
+      problems.innerHTML = '';
+      roiImage.removeAttribute('src');
+      roiMeta.textContent = '';
+      document.getElementById('fieldRaw').textContent = '';
+
+      let finalReport = null;
+      const handleEvent = (data) => {
+        if (data.stage === 'started') return;
+        if (data.stage === 'final') {
+          finalReport = data.report;
+        } else if (data.stage === 'error') {
+          statusBox.innerHTML =
+            `<strong>处理失败</strong><span class="meta">${escapeHtml(data.error || '')}</span>`;
+        } else {
+          setStage(data.stage, data.status, data);
+        }
+      };
+
+      try {
+        const response = await fetch('/api/analyze/stream', { method: 'POST', body: formData });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf('\n\n')) >= 0) {
+            const raw = buffer.slice(0, idx);
+            buffer = buffer.slice(idx + 2);
+            const line = raw.split('\n').find(l => l.startsWith('data: '));
+            if (!line) continue;
+            handleEvent(JSON.parse(line.slice(6)));
+          }
+        }
+      } catch (e) {
+        statusBox.innerHTML =
+          `<strong>请求失败</strong><span class="meta">${escapeHtml(e.message)}</span>`;
+        return;
+      }
+
+      if (finalReport) {
+        lastReport = finalReport;
+        lastManifest = null;
+        hideProgress();
+        render(finalReport);
+      } else {
+        statusBox.innerHTML =
+          '<strong>未拿到结果</strong><span class="meta">请看下方进度</span>';
+      }
     });
+
+    function showProgress() {
+      const list = document.getElementById('progress');
+      list.classList.remove('hidden');
+      list.querySelectorAll('li').forEach(li => {
+        const stage = li.dataset.stage;
+        li.className = 'pending';
+        li.querySelector('.icon').textContent = '⏳';
+        const meta = li.querySelector('.meta');
+        // Restore the default label from data-label.
+        meta.textContent = meta.dataset.label || meta.textContent;
+      });
+    }
+
+    function hideProgress() {
+      document.getElementById('progress').classList.add('hidden');
+    }
+
+    function setStage(stage, status, extra) {
+      const li = document.querySelector(`#progress li[data-stage="${stage}"]`);
+      if (!li) return;
+      const icon = li.querySelector('.icon');
+      const meta = li.querySelector('.meta');
+      const defaultLabel = meta.dataset.label || meta.textContent;
+      if (status === 'running') {
+        li.className = 'running';
+        icon.textContent = '🔄';
+        meta.textContent = defaultLabel;
+      } else if (status === 'done') {
+        li.className = 'done';
+        icon.textContent = '✅';
+        const dur = extra && extra.duration_ms ? ` · ${(extra.duration_ms / 1000).toFixed(1)}s` : '';
+        const extra_count = extra && extra.blocks != null ? ` · ${extra.blocks} blocks` :
+                            extra && extra.count != null ? ` · ${extra.count} 字段` :
+                            extra && extra.total != null ? ` · ${extra.total} 字段` : '';
+        meta.textContent = `${dur.replace(/^ · /, '')}${extra_count} · ${defaultLabel}`;
+      } else if (status === 'failed') {
+        li.className = 'failed';
+        icon.textContent = '❌';
+        const reason = extra && (extra.error || extra.reason);
+        meta.textContent = reason ? `错误: ${reason}` : '失败';
+      } else if (status === 'skipped') {
+        li.className = 'skipped';
+        icon.textContent = '⏭️';
+        meta.textContent = '无失败字段，跳过';
+      }
+    }
 
     document.getElementById('showUpload').onclick = () => {
       const url = lastManifest?.images?.upload || lastReport?.upload_url;

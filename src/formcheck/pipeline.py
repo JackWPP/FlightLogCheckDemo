@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import numpy as np
@@ -21,6 +23,12 @@ from .schemas import FieldCheck
 from .validators import validate
 
 
+# Progress callback signature: cb(stage: str, status: str, **extra) -> None
+# Stages: registration, ocr, validate, review
+# Status: running, done, failed, skipped
+ProgressCB = Callable[[str, str], None] | None
+
+
 def analyze_image(
     image_path: Path,
     provider: str = "mock",
@@ -29,25 +37,59 @@ def analyze_image(
     mode: str = "hybrid",
     cleaner_provider: str = "siliconflow",
     cleaner_model: str | None = None,
+    progress_cb: ProgressCB = None,
 ) -> dict:
+    def emit(stage: str, status: str, **extra) -> None:
+        if progress_cb is not None:
+            try:
+                progress_cb(stage, status, **extra)
+            except Exception:
+                # Never let a buggy progress sink break the pipeline.
+                pass
+
     run_dir = OUT_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- Stage 1: registration (SIFT/ORB feature match) --------------------
+    t = time.time()
+    emit("registration", "running")
     image = imread(image_path)
     template = load_template(CANONICAL_DIR)
     reg = register(image, template)
     save_registration_summary(run_dir / "registration.json", reg)
     if not reg.ok or reg.warped is None:
+        emit("registration", "failed",
+             duration_ms=int((time.time() - t) * 1000),
+             reason=reg.reject_reason)
         return {"ok": False, "error": reg.reject_reason, "registration": _reg_dict(reg)}
+    emit("registration", "done",
+         duration_ms=int((time.time() - t) * 1000),
+         inliers=reg.inliers)
+
+    # --- Stage 2: warp + ROI crop (fast, no event) ------------------------
     warped = apply_template_alignment(reg.warped)
     warped_path = run_dir / "warped.png"
     imwrite(warped_path, warped)
     canonical, fields = load_fields(FIELDS_PATH)
     roi_dir = run_dir / "rois"
     roi_paths = save_rois(warped, fields, roi_dir)
-    ocr_meta = run_hybrid_ocr(image_path, run_dir, fields, canonical, mode, cleaner_provider, cleaner_model)
 
+    # --- Stage 3: OCR (PP-OCRv6 page recognition) --------------------------
+    t = time.time()
+    emit("ocr", "running")
+    ocr_meta = run_hybrid_ocr(
+        image_path, run_dir, fields, canonical, mode, cleaner_provider, cleaner_model
+    )
+    blocks_count = len(ocr_meta["public"].get("blocks") or [])
+    ocr_status = "done" if ocr_meta["public"].get("ok") else "failed"
+    emit("ocr", ocr_status,
+         duration_ms=int((time.time() - t) * 1000),
+         blocks=blocks_count)
+
+    # --- Stage 4: per-field validation (local rules) ----------------------
+    t = time.time()
+    emit("validate", "running")
     checks: list[FieldCheck] = []
-    problems: list[str] = []
     for field in fields:
         roi = crop_roi(warped, field.bbox)
         if field.recognizer == "checkbox" or provider == "mock":
@@ -60,20 +102,39 @@ def analyze_image(
             if not recognition or not (recognition.value or recognition.normalized_value):
                 recognition = recognize_with_provider(field, roi_paths[field.id], provider, model)
         passed, msg = validate(field, recognition)
-        if should_roi_review(field, recognition, passed, mode):
-            recognition, passed, msg = roi_review_field(
-                field,
-                recognition,
-                passed,
-                msg,
-                warped,
-                run_dir,
-            )
-        if not passed:
-            problems.append(msg)
-        checks.append(FieldCheck(field, recognition, passed, msg, roi_url=f"/runs/{run_id}/rois/{field.id}.png"))
+        checks.append(FieldCheck(
+            field, recognition, passed, msg,
+            roi_url=f"/runs/{run_id}/rois/{field.id}.png",
+        ))
+    emit("validate", "done",
+         duration_ms=int((time.time() - t) * 1000),
+         count=len(checks))
 
+    # --- Stage 5: ROI-VLM review (only for fields that need it) ------------
+    needs_review = [
+        c for c in checks
+        if should_roi_review(c.field, c.recognition, c.passed, mode)
+    ]
+    if needs_review:
+        t = time.time()
+        emit("review", "running", total=len(needs_review))
+        for c in needs_review:
+            i = checks.index(c)
+            new_rec, new_passed, new_msg = roi_review_field(
+                c.field, c.recognition, c.passed, c.message, warped, run_dir,
+            )
+            checks[i] = FieldCheck(
+                c.field, new_rec, new_passed, new_msg, c.roi_url,
+            )
+        emit("review", "done",
+             duration_ms=int((time.time() - t) * 1000),
+             total=len(needs_review))
+    else:
+        emit("review", "skipped", total=0)
+
+    # --- Build report ------------------------------------------------------
     field_dicts = [_check_dict(check) for check in checks]
+    problems = [c.message for c in checks if not c.passed]
     report = {
         "ok": not problems,
         "problems": problems or ["通过"],
@@ -84,7 +145,9 @@ def analyze_image(
         "ocr": ocr_meta["public"],
         "fields": field_dicts,
     }
-    (run_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    (run_dir / "report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return report
 
 
