@@ -44,10 +44,30 @@ RUN uv sync --python 3.12 --frozen --no-dev
 RUN mkdir -p /app/out /app/outputs/runtime
 
 # --- 3. Runtime config -----------------------------------------------------------
-# Drop privileges.
-RUN useradd --create-home --shell /bin/bash --uid 10001 appuser \
-    && chown -R appuser:appuser /app
-USER appuser
+# NOTE on user / permissions:
+# The container intentionally runs as root so the bind-mounted host dirs
+# (./out, ./outputs/runtime — owned by the host's deploy user, e.g. uid 1004)
+# are writable by uvicorn. If the host dir is owned by some other uid than
+# 10001, the previous `USER appuser` setup would fail with PermissionError
+# at runtime.
+#
+# To harden for production, switch back to a non-root user and add an
+# entrypoint that chowns /app/out and /app/outputs/runtime at startup:
+#   RUN useradd --create-home --shell /bin/bash --uid 10001 appuser \
+#       && chown -R appuser:appuser /app
+#   USER root                              # entrypoint needs root to chown
+#   RUN apt-get update -qq && apt-get install -y --no-install-recommends gosu \
+#       && rm -rf /var/lib/apt/lists/*
+#   COPY deploy/entrypoint.sh /entrypoint.sh
+#   RUN chmod +x /entrypoint.sh
+#   ENTRYPOINT ["/entrypoint.sh"]
+#   USER appuser
+# And in entrypoint.sh:
+#   #!/bin/sh
+#   set -e
+#   mkdir -p /app/out /app/outputs/runtime
+#   chown -R appuser:appuser /app/out /app/outputs/runtime
+#   exec gosu appuser "$@"
 
 EXPOSE 8003
 
