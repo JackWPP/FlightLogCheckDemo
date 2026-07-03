@@ -3,8 +3,8 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from formcheck.pipeline import build_ppocr_roi_evidence, registration_mode
-from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock
+from formcheck.pipeline import build_ppocr_roi_evidence, registration_mode, should_roi_review
+from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock, RecognitionResult
 
 
 def test_build_ppocr_roi_evidence_uses_ppocr_image(tmp_path, monkeypatch) -> None:
@@ -51,3 +51,19 @@ def test_registration_defaults_off(monkeypatch) -> None:
     monkeypatch.delenv("REGISTRATION_MODE", raising=False)
 
     assert registration_mode() == "off"
+
+
+def test_failed_numeric_fields_go_to_roi_review_even_without_value() -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="digit_length",
+        params={"allow_lengths": [4, 5]},
+        fail_msg="APU循环不是4或5位",
+    )
+    recognition = RecognitionResult(value="", normalized_value="", provider="unresolved")
+
+    assert should_roi_review(field, recognition, passed=False, mode="hybrid")

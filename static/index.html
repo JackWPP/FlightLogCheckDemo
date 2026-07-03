@@ -83,6 +83,87 @@
       padding: 12px;
     }
     .viewer img { max-width: 100%; display: block; border: 1px solid var(--line); background: #fff; }
+    .evidence-board {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .evidence-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .evidence-hero strong,
+    .evidence-tile strong {
+      font-size: 13px;
+      line-height: 1.2;
+    }
+    .evidence-hero span,
+    .evidence-tile span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .evidence-hero img {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .evidence-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .evidence-tile {
+      display: grid;
+      grid-template-rows: auto auto minmax(180px, 1fr);
+      gap: 6px;
+      min-height: 240px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .evidence-tile img {
+      width: 100%;
+      height: 100%;
+      max-height: 260px;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .layout-stage {
+      position: relative;
+      width: 100%;
+      min-height: 220px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .layout-stage img {
+      width: 100%;
+      border: 0;
+    }
+    .layout-stage svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .layout-box { fill: rgba(28,111,184,0.08); stroke: #1c6fb8; stroke-width: 2; }
+    .layout-box.weak { fill: rgba(183,121,31,0.08); stroke: #b7791f; }
+    .layout-label {
+      fill: #17202a;
+      font-size: 18px;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
     .form-table {
       flex: 1;
       overflow: auto;
@@ -136,6 +217,33 @@
     .problem-list { margin: 0; padding-left: 18px; }
     .problem-list li { margin: 5px 0; color: var(--bad); cursor: pointer; }
     .evidence img { width: 100%; border: 1px solid var(--line); background: #fff; }
+    .evidence-main {
+      max-height: 360px;
+      object-fit: contain;
+    }
+    .candidate-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .candidate-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+      font-size: 12px;
+    }
+    .candidate-item b {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .candidate-item span {
+      color: var(--muted);
+      white-space: nowrap;
+    }
     .meta { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
     pre.meta {
       white-space: pre-wrap;
@@ -177,6 +285,7 @@
     @media (max-width: 1100px) {
       main { grid-template-columns: 1fr; }
       section { min-height: 380px; }
+      .evidence-strip { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -199,7 +308,7 @@
     <section>
       <div class="section-head">
         <h2>影像证据</h2>
-        <div class="toolbar">
+        <div id="imageToolbar" class="toolbar">
           <button id="showUpload" type="button">原图</button>
           <button id="showWarped" type="button">配准图</button>
           <button id="showOcr" type="button">OCR图</button>
@@ -207,7 +316,10 @@
           <button id="showAiBase" type="button">AI底图</button>
         </div>
       </div>
-      <div class="viewer"><img id="mainImage" alt="上传或配准后的表单"></div>
+      <div class="viewer">
+        <div id="demoViewer"><img id="mainImage" alt="上传或配准后的表单"></div>
+        <div id="liveEvidence" class="evidence-board hidden"></div>
+      </div>
     </section>
     <section>
       <div class="section-head"><h2>电子化字段</h2><span id="fieldCount" class="meta">等待上传</span></div>
@@ -243,8 +355,9 @@
         <ol id="problems" class="problem-list"></ol>
         <div class="evidence">
           <h3>字段证据</h3>
-          <img id="roiImage" alt="字段裁切图">
+          <img id="roiImage" class="evidence-main" alt="字段裁切图">
           <p id="roiMeta" class="meta"></p>
+          <div id="candidateList" class="candidate-list"></div>
           <pre id="fieldRaw" class="meta"></pre>
         </div>
       </div>
@@ -256,11 +369,15 @@
     const uploadForm = document.getElementById('uploadForm');
     const fileInput = document.getElementById('fileInput');
     const mainImage = document.getElementById('mainImage');
+    const demoViewer = document.getElementById('demoViewer');
+    const liveEvidence = document.getElementById('liveEvidence');
+    const imageToolbar = document.getElementById('imageToolbar');
     const fieldTable = document.getElementById('fieldTable');
     const problems = document.getElementById('problems');
     const statusBox = document.getElementById('status');
     const roiImage = document.getElementById('roiImage');
     const roiMeta = document.getElementById('roiMeta');
+    const candidateList = document.getElementById('candidateList');
     const summaryBox = document.getElementById('summary');
 
     uploadForm.classList.add('hidden');
@@ -276,6 +393,7 @@
       document.getElementById('demoMode').classList.toggle('active', mode === 'demo');
       document.getElementById('uploadMode').classList.toggle('active', mode === 'upload');
       uploadForm.classList.toggle('hidden', mode !== 'upload');
+      if (mode === 'upload') renderLiveIdle();
     }
 
     async function loadDemo() {
@@ -314,8 +432,10 @@
       statusBox.innerHTML = '<strong>核查中</strong><span class="meta">实时进度见下方。</span>';
       fieldTable.innerHTML = '';
       problems.innerHTML = '';
+      renderLivePending(fileInput.files[0]);
       roiImage.removeAttribute('src');
       roiMeta.textContent = '';
+      candidateList.innerHTML = '';
       document.getElementById('fieldRaw').textContent = '';
 
       let finalReport = null;
@@ -393,7 +513,10 @@
       if (status === 'running') {
         li.className = 'running';
         icon.textContent = '🔄';
-        meta.textContent = defaultLabel;
+        const progress = extra && extra.completed != null && extra.total != null
+          ? ` · ${extra.completed}/${extra.total}`
+          : '';
+        meta.textContent = `${defaultLabel}${progress}`;
       } else if (status === 'done') {
         li.className = 'done';
         icon.textContent = '✅';
@@ -448,6 +571,7 @@
         return;
       }
       mainImage.src = lastManifest?.images?.ocr || report.ocr?.ocr_image_url || report.warped_url || report.upload_url;
+      renderImageEvidence(report);
       statusBox.innerHTML = report.ok
         ? '<strong style="color: var(--good)">通过</strong><span class="meta">未发现规则问题。</span>'
         : `<strong style="color: var(--bad)">不通过</strong><span class="meta">点击问题查看对应裁切证据。${report.ocr?.error ? ' OCR: ' + escapeHtml(report.ocr.error) : ''}</span>`;
@@ -477,6 +601,118 @@
         });
       });
       if (report.fields.length) selectField(report.fields.find(f => !f.passed)?.id || report.fields[0].id);
+    }
+
+    function renderImageEvidence(report) {
+      const isDemo = Boolean(lastManifest);
+      demoViewer.classList.toggle('hidden', !isDemo);
+      liveEvidence.classList.toggle('hidden', isDemo);
+      imageToolbar.classList.toggle('hidden', !isDemo);
+      if (isDemo) return;
+
+      const uploadUrl = report.upload_url || '';
+      const ocrUrl = report.ocr?.ocr_image_url || '';
+      const blocks = report.ocr?.blocks || [];
+      const blockCount = blocks.length;
+      const failed = report.fields?.filter(f => !f.passed).length || 0;
+      liveEvidence.innerHTML = `
+        <div class="evidence-hero">
+          <strong>上传原图</strong>
+          <span>客户提交的原始照片，作为整页 OCR 输入。</span>
+          ${uploadUrl ? `<img src="${escapeAttr(uploadUrl)}" alt="上传原图">` : '<span>暂无原图</span>'}
+        </div>
+        <div class="evidence-strip">
+          <div class="evidence-tile">
+            <strong>PP-OCRv6 矫正 / 检测图</strong>
+            <span>由 PaddleOCR 输出的处理结果图，用于观察文字检测质量。</span>
+            ${ocrUrl ? `<img src="${escapeAttr(ocrUrl)}" alt="PP-OCRv6 输出图">` : '<span>暂无 OCR 图</span>'}
+          </div>
+          <div class="evidence-tile">
+            <strong>识别 Layout</strong>
+            <span>${blockCount} 个 OCR blocks；${failed} 个字段未通过或待复核。</span>
+            ${layoutOverlay(ocrUrl || uploadUrl, blocks)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLivePending(file) {
+      lastManifest = null;
+      demoViewer.classList.add('hidden');
+      liveEvidence.classList.remove('hidden');
+      imageToolbar.classList.add('hidden');
+      const preview = file ? URL.createObjectURL(file) : '';
+      liveEvidence.innerHTML = `
+        <div class="evidence-hero">
+          <strong>上传原图</strong>
+          <span>正在送入 PP-OCRv6 做文档矫正与整页 OCR。</span>
+          ${preview ? `<img src="${escapeAttr(preview)}" alt="待处理原图">` : '<span>等待图片</span>'}
+        </div>
+        <div class="evidence-strip">
+          <div class="evidence-tile">
+            <strong>PP-OCRv6 矫正 / 检测图</strong>
+            <span>OCR 完成后显示。</span>
+            <span>处理中…</span>
+          </div>
+          <div class="evidence-tile">
+            <strong>识别 Layout</strong>
+            <span>OCR blocks 返回后显示。</span>
+            <span>等待 OCR blocks…</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLiveIdle() {
+      lastManifest = null;
+      demoViewer.classList.add('hidden');
+      liveEvidence.classList.remove('hidden');
+      imageToolbar.classList.add('hidden');
+      liveEvidence.innerHTML = `
+        <div class="evidence-hero">
+          <strong>上传原图</strong>
+          <span>选择文件后会显示原始照片预览，并作为 PP-OCRv6 的输入。</span>
+          <span>等待选择图片。</span>
+        </div>
+        <div class="evidence-strip">
+          <div class="evidence-tile">
+            <strong>PP-OCRv6 矫正 / 检测图</strong>
+            <span>上传并核查后显示 PaddleOCR 文档处理结果。</span>
+            <span>等待 OCR。</span>
+          </div>
+          <div class="evidence-tile">
+            <strong>识别 Layout</strong>
+            <span>OCR blocks 返回后叠加显示文字块布局。</span>
+            <span>等待 layout。</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function layoutOverlay(imageUrl, blocks) {
+      if (!imageUrl) return '<span>暂无 layout 图</span>';
+      const bounds = layoutBounds(blocks);
+      const rects = blocks.slice(0, 260).map((block, index) => {
+        const box = block.box || [];
+        if (box.length < 4) return '';
+        const [x1, y1, x2, y2] = box.map(Number);
+        const weak = Number(block.score || 0) < 0.75 ? ' weak' : '';
+        const label = index % 12 === 0 ? `<text class="layout-label" x="${x1}" y="${Math.max(18, y1 - 4)}">${escapeHtml(block.id || index)}</text>` : '';
+        return `<rect class="layout-box${weak}" x="${x1}" y="${y1}" width="${Math.max(1, x2 - x1)}" height="${Math.max(1, y2 - y1)}"></rect>${label}`;
+      }).join('');
+      return `
+        <div class="layout-stage">
+          <img src="${escapeAttr(imageUrl)}" alt="layout 底图">
+          <svg viewBox="0 0 ${bounds.width} ${bounds.height}" preserveAspectRatio="none" aria-hidden="true">${rects}</svg>
+        </div>
+      `;
+    }
+
+    function layoutBounds(blocks) {
+      if (!blocks || !blocks.length) return { width: 1600, height: 1000 };
+      const maxX = Math.max(...blocks.map(b => Number(b.box?.[2] || 0)), 1);
+      const maxY = Math.max(...blocks.map(b => Number(b.box?.[3] || 0)), 1);
+      return { width: Math.ceil(maxX * 1.03), height: Math.ceil(maxY * 1.03) };
     }
 
     function renderSummary(report) {
@@ -511,15 +747,27 @@
     function selectField(id) {
       const field = lastReport.fields.find(item => item.id === id);
       if (!field) return;
-      roiImage.src = field.roi_url || lastReport.ocr?.ocr_image_url || lastReport.upload_url || '';
+      const review = field.raw?.roi_review || null;
+      const evidenceUrl = review?.roi_url || field.roi_url || lastReport.ocr?.ocr_image_url || lastReport.upload_url || '';
+      roiImage.src = evidenceUrl;
       const candidates = lastReport.ocr?.candidates?.[field.id] || [];
-      roiMeta.textContent = `${field.label} | ${field.source_label || sourceLabel(field.provider)} | ${field.provider}/${field.model} | ${field.message || '通过'}${field.needs_review ? ' | 需复核' : ''} | candidates=${candidates.length}`;
+      const evidenceKind = review?.roi_url ? 'qwen复核ROI' : field.roi_url ? '字段ROI' : '整页图';
+      roiMeta.textContent = `${field.label} | ${evidenceKind} | ${field.source_label || sourceLabel(field.provider)} | ${field.provider}/${field.model} | ${field.message || '通过'}${field.needs_review ? ' | 需复核' : ''} | candidates=${candidates.length}`;
+      candidateList.innerHTML = candidates.length
+        ? candidates.slice(0, 5).map(candidate => `
+            <div class="candidate-item">
+              <b>${escapeHtml(candidate.text || '')}</b>
+              <span>${escapeHtml(candidate.block_id || '')} · ${Number(candidate.assignment_score || 0).toFixed(2)}</span>
+            </div>
+          `).join('')
+        : '<div class="candidate-item"><b>无候选 block</b><span>ROI/VLM</span></div>';
       document.getElementById('fieldRaw').textContent = JSON.stringify({
         value: field.value,
         normalized_value: field.normalized_value,
         confidence: field.confidence,
         needs_review: field.needs_review,
         review_reason: field.review_reason,
+        evidence_url: evidenceUrl,
         raw: field.raw,
         candidates: candidates.slice(0, 5)
       }, null, 2);
@@ -536,6 +784,10 @@
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#96;');
     }
 
     function sourceLabel(provider) {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable
 
@@ -143,16 +144,15 @@ def analyze_image(
     if needs_review:
         t = time.time()
         emit("review", "running", total=len(needs_review))
-        for c in needs_review:
-            i = checks.index(c)
-            evidence_path = ppocr_roi_paths.get(c.field.id)
-            new_rec, new_passed, new_msg = roi_review_field(
-                c.field, c.recognition, c.passed, c.message, run_dir,
-                evidence_path=evidence_path, warped=warped,
-            )
-            checks[i] = FieldCheck(
-                c.field, new_rec, new_passed, new_msg, c.roi_url,
-            )
+        with ThreadPoolExecutor(max_workers=roi_review_concurrency()) as pool:
+            futures = {
+                pool.submit(review_check, c, run_dir, ppocr_roi_paths.get(c.field.id), warped): checks.index(c)
+                for c in needs_review
+            }
+            for done_count, future in enumerate(as_completed(futures), start=1):
+                i = futures[future]
+                checks[i] = future.result()
+                emit("review", "running", total=len(needs_review), completed=done_count)
         emit("review", "done",
              duration_ms=int((time.time() - t) * 1000),
              total=len(needs_review))
@@ -182,6 +182,13 @@ def analyze_image(
 def registration_mode() -> str:
     value = os.getenv("REGISTRATION_MODE", "off").strip().lower()
     return value if value in REGISTRATION_MODES else "off"
+
+
+def roi_review_concurrency() -> int:
+    try:
+        return max(1, min(6, int(os.getenv("ROI_REVIEW_CONCURRENCY", "3"))))
+    except ValueError:
+        return 3
 
 
 def unresolved_result(field: FieldSpec, reason: str) -> RecognitionResult:
@@ -324,13 +331,21 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
     if field.assignment.get("skip_roi_review"):
         return False
     has_value = bool(recognition.normalized_value or recognition.value)
-    if not has_value:
-        return False
-    if field.assignment.get("roi_review"):
+    if field.assignment.get("prefer_roi_vlm") or field.assignment.get("roi_review"):
         return True
     if field.validator in {"digit_length", "int_range", "regex"}:
         return True
+    if not has_value:
+        return False
     return False
+
+
+def review_check(check: FieldCheck, run_dir: Path, evidence_path: Path | None, warped) -> FieldCheck:
+    new_rec, new_passed, new_msg = roi_review_field(
+        check.field, check.recognition, check.passed, check.message, run_dir,
+        evidence_path=evidence_path, warped=warped,
+    )
+    return FieldCheck(check.field, new_rec, new_passed, new_msg, check.roi_url)
 
 
 def roi_review_field(

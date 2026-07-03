@@ -46,6 +46,7 @@ copy .env.example .env
 - `SILICONFLOW_API_KEY`：DeepSeek cleaner，默认模型 `deepseek-ai/DeepSeek-V4-Flash`。
 - `ALIYUN_API_KEY`：ROI 级视觉复核，默认模型 `qwen3.7-plus`。
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型。
+- `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
 - `REGISTRATION_MODE`：默认 `off`。可选 `optional` / `required`，只在需要旧版 SIFT 配准 ROI 时开启。
 
 说明：默认缓存示例不需要 key；只有上传新图并实时分析时才需要云端 key。
@@ -71,7 +72,7 @@ fields.yaml             字段、ROI、规则和候选归属配置
   -> OCR blocks 字段归属
   -> DeepSeek cleaner 清洗字段值
   -> 本地 validators 规则校验
-  -> 从 PaddleOCR OCR 图/blocks 裁切失败关键字段 ROI，交给 ROI-VLM double check
+  -> 从 PaddleOCR OCR 图/blocks 裁切失败关键字段 ROI，并发交给 ROI-VLM double check
   -> Web 展示问题列表与证据
 ```
 
