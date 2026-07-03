@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>飞行记录单核查 Demo</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --ink: #17202a;
+      --muted: #657282;
+      --line: #d9e0e8;
+      --panel: #ffffff;
+      --bad: #cf3d35;
+      --good: #16845f;
+      --accent: #1c6fb8;
+      --warn: #b7791f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font: 14px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    header {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 18px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0; }
+    main {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.95fr) minmax(420px, 1.2fr) minmax(300px, 0.85fr);
+      gap: 14px;
+      padding: 14px;
+      min-height: calc(100vh - 58px);
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-width: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .section-head {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-head h2 { margin: 0; font-size: 15px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .tabs { display: flex; gap: 6px; align-items: center; }
+    .tab.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .hidden { display: none !important; }
+    button, select, input[type="text"] {
+      height: 34px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 6px;
+      padding: 0 10px;
+      color: var(--ink);
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    input[type="file"] { max-width: 210px; }
+    .viewer {
+      position: relative;
+      flex: 1;
+      min-height: 300px;
+      background: #eef2f5;
+      overflow: auto;
+      padding: 12px;
+    }
+    .viewer img { max-width: 100%; display: block; border: 1px solid var(--line); background: #fff; }
+    .form-table {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+    .group { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .group-title { padding: 8px 10px; background: #f7f9fb; font-weight: 700; border-bottom: 1px solid var(--line); }
+    .field-row {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 70px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eef1f4;
+      cursor: pointer;
+    }
+    .field-row:last-child { border-bottom: 0; }
+    .field-row.fail { background: #fff4f2; }
+    .field-row.pass { background: #f3fbf7; }
+    .value { color: var(--muted); overflow-wrap: anywhere; }
+    .badge { justify-self: end; font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); }
+    .badge.pass { color: var(--good); border-color: #b8e2d1; background: #f3fbf7; }
+    .badge.fail { color: var(--bad); border-color: #efc0ba; background: #fff4f2; }
+    .badge.review { color: var(--warn); border-color: #f2d39b; background: #fffaf0; }
+    .source {
+      justify-self: start;
+      font-size: 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 1px 7px;
+      color: var(--muted);
+      background: #fff;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+    .metric { border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; background: #fff; }
+    .metric strong { display: block; font-size: 16px; line-height: 1.1; }
+    .metric span { color: var(--muted); font-size: 12px; }
+    .side { padding: 12px; overflow: auto; gap: 12px; display: flex; flex-direction: column; }
+    .status { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+    .status strong { display: block; font-size: 18px; margin-bottom: 4px; }
+    .problem-list { margin: 0; padding-left: 18px; }
+    .problem-list li { margin: 5px 0; color: var(--bad); cursor: pointer; }
+    .evidence img { width: 100%; border: 1px solid var(--line); background: #fff; }
+    .meta { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    pre.meta {
+      white-space: pre-wrap;
+      max-height: 260px;
+      overflow: auto;
+      background: #f7f9fb;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    @media (max-width: 1100px) {
+      main { grid-template-columns: 1fr; }
+      section { min-height: 380px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="toolbar">
+      <h1>飞行记录单核查 Demo</h1>
+      <div class="tabs">
+        <button id="demoMode" class="tab active" type="button">示例</button>
+        <button id="uploadMode" class="tab" type="button">上传新图</button>
+      </div>
+    </div>
+    <form id="uploadForm" class="toolbar">
+      <input id="fileInput" name="file" type="file" accept="image/*" required>
+      <select id="provider" name="provider">
+        <option value="mock">Mock/仅规则</option>
+        <option value="siliconflow">SiliconFlow</option>
+        <option value="aliyun">阿里百炼</option>
+      </select>
+      <select id="mode" name="mode">
+        <option value="hybrid">Hybrid OCR</option>
+        <option value="roi_only">ROI Only</option>
+        <option value="ppocr_only">PP-OCR Only</option>
+      </select>
+      <input id="model" name="model" type="text" placeholder="模型名，可留空">
+      <input id="cleanerModel" name="cleaner_model" type="text" placeholder="Cleaner: DeepSeek-V4-Flash">
+      <button class="primary" type="submit">开始核查</button>
+    </form>
+  </header>
+  <main>
+    <section>
+      <div class="section-head">
+        <h2>影像证据</h2>
+        <div class="toolbar">
+          <button id="showUpload" type="button">原图</button>
+          <button id="showWarped" type="button">配准图</button>
+          <button id="showOcr" type="button">OCR图</button>
+          <button id="showBase" type="button">扫描底图</button>
+          <button id="showAiBase" type="button">AI底图</button>
+        </div>
+      </div>
+      <div class="viewer"><img id="mainImage" alt="上传或配准后的表单"></div>
+    </section>
+    <section>
+      <div class="section-head"><h2>电子化字段</h2><span id="fieldCount" class="meta">等待上传</span></div>
+      <div id="summary" class="summary"></div>
+      <div id="fieldTable" class="form-table"></div>
+    </section>
+    <section>
+      <div class="section-head"><h2>核查结论</h2></div>
+      <div class="side">
+        <div id="status" class="status"><strong>未开始</strong><span class="meta">上传一张表单照片。</span></div>
+        <ol id="problems" class="problem-list"></ol>
+        <div class="evidence">
+          <h3>字段证据</h3>
+          <img id="roiImage" alt="字段裁切图">
+          <p id="roiMeta" class="meta"></p>
+          <pre id="fieldRaw" class="meta"></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    let lastReport = null;
+    let lastManifest = null;
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const mainImage = document.getElementById('mainImage');
+    const fieldTable = document.getElementById('fieldTable');
+    const problems = document.getElementById('problems');
+    const statusBox = document.getElementById('status');
+    const roiImage = document.getElementById('roiImage');
+    const roiMeta = document.getElementById('roiMeta');
+    const summaryBox = document.getElementById('summary');
+
+    uploadForm.classList.add('hidden');
+    document.addEventListener('DOMContentLoaded', loadDemo);
+    document.getElementById('demoMode').onclick = () => {
+      setMode('demo');
+      loadDemo();
+    };
+    document.getElementById('uploadMode').onclick = () => setMode('upload');
+
+    function setMode(mode) {
+      document.getElementById('demoMode').classList.toggle('active', mode === 'demo');
+      document.getElementById('uploadMode').classList.toggle('active', mode === 'upload');
+      uploadForm.classList.toggle('hidden', mode !== 'upload');
+    }
+
+    async function loadDemo() {
+      statusBox.innerHTML = '<strong>载入示例</strong><span class="meta">读取缓存结果，不调用云端模型。</span>';
+      const response = await fetch('/api/demo');
+      const payload = await response.json();
+      lastManifest = payload.manifest;
+      lastReport = payload.report;
+      render(lastReport);
+    }
+
+    uploadForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('provider', document.getElementById('provider').value);
+      formData.append('mode', document.getElementById('mode').value);
+      formData.append('model', document.getElementById('model').value);
+      formData.append('cleaner_provider', 'siliconflow');
+      formData.append('cleaner_model', document.getElementById('cleanerModel').value);
+      statusBox.innerHTML = '<strong>核查中</strong><span class="meta">正在配准、裁切和识别。</span>';
+      const response = await fetch('/api/analyze', { method: 'POST', body: formData });
+      lastReport = await response.json();
+      lastManifest = null;
+      render(lastReport);
+    });
+
+    document.getElementById('showUpload').onclick = () => {
+      const url = lastManifest?.images?.upload || lastReport?.upload_url;
+      if (url) mainImage.src = url;
+    };
+    document.getElementById('showWarped').onclick = () => {
+      const url = lastManifest?.images?.warped || lastReport?.warped_url;
+      if (url) mainImage.src = url;
+    };
+    document.getElementById('showOcr').onclick = () => {
+      const url = lastManifest?.images?.ocr || lastReport?.ocr?.ocr_image_url;
+      if (url) mainImage.src = url;
+    };
+    document.getElementById('showBase').onclick = () => {
+      mainImage.src = lastManifest?.images?.scan_base || '/assets/canonical/template_registration.png';
+    };
+    document.getElementById('showAiBase').onclick = () => {
+      mainImage.src = lastManifest?.images?.gpt_base || '/assets/canonical/experimental_gpt_image_base.png';
+    };
+
+    function render(report) {
+      if (!report.ok && report.error) {
+        statusBox.innerHTML = `<strong>配准失败</strong><span class="meta">${escapeHtml(report.error)}</span>`;
+        problems.innerHTML = '';
+        fieldTable.innerHTML = '';
+        if (report.upload_url) mainImage.src = report.upload_url;
+        return;
+      }
+      mainImage.src = lastManifest?.images?.ocr || report.ocr?.ocr_image_url || report.warped_url || report.upload_url;
+      statusBox.innerHTML = report.ok
+        ? '<strong style="color: var(--good)">通过</strong><span class="meta">未发现规则问题。</span>'
+        : `<strong style="color: var(--bad)">不通过</strong><span class="meta">点击问题查看对应裁切证据。${report.ocr?.error ? ' OCR: ' + escapeHtml(report.ocr.error) : ''}</span>`;
+      renderSummary(report);
+      document.getElementById('fieldCount').textContent = `${report.fields.length} 个字段`;
+      const groups = {};
+      for (const field of report.fields) {
+        groups[field.section] ||= [];
+        groups[field.section].push(field);
+      }
+      fieldTable.innerHTML = Object.entries(groups).map(([section, fields]) => `
+        <div class="group">
+          <div class="group-title">${sectionName(section)}</div>
+          ${fields.map(field => fieldRow(field)).join('')}
+        </div>
+      `).join('');
+      fieldTable.querySelectorAll('.field-row').forEach(row => {
+        row.addEventListener('click', () => selectField(row.dataset.id));
+      });
+      problems.innerHTML = (report.problems || []).map((p) => {
+        const field = report.fields.find(item => item.message === p);
+        return `<li data-id="${field?.id || ''}">${escapeHtml(p)}</li>`;
+      }).join('');
+      problems.querySelectorAll('li').forEach(item => {
+        item.addEventListener('click', () => {
+          if (item.dataset.id) selectField(item.dataset.id);
+        });
+      });
+      if (report.fields.length) selectField(report.fields.find(f => !f.passed)?.id || report.fields[0].id);
+    }
+
+    function renderSummary(report) {
+      const s = report.summary || {};
+      summaryBox.innerHTML = [
+        metric(s.ocr_block_count ?? report.ocr?.blocks?.length ?? 0, 'OCR Blocks'),
+        metric(s.passed_count ?? report.fields.filter(f => f.passed).length, '通过'),
+        metric(s.failed_count ?? report.fields.filter(f => !f.passed).length, '失败'),
+        metric(s.review_count ?? report.fields.filter(f => f.needs_review).length, '需复核'),
+        metric((s.cleaner_model || report.ocr?.cleaner_model || 'cached').replace('deepseek-ai/', ''), 'Cleaner')
+      ].join('');
+    }
+
+    function metric(value, label) {
+      return `<div class="metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function fieldRow(field) {
+      const cls = field.passed ? 'pass' : 'fail';
+      const value = field.normalized_value || field.value || '未识别';
+      const state = field.needs_review ? 'review' : cls;
+      const stateText = field.needs_review ? '复核' : (field.passed ? '通过' : '失败');
+      return `
+        <div class="field-row ${cls}" data-id="${field.id}">
+          <div>${escapeHtml(field.label)}</div>
+          <div class="value">${escapeHtml(value)} <span class="source">${escapeHtml(field.source_label || sourceLabel(field.provider))}</span></div>
+          <span class="badge ${state}">${stateText}</span>
+        </div>
+      `;
+    }
+
+    function selectField(id) {
+      const field = lastReport.fields.find(item => item.id === id);
+      if (!field) return;
+      roiImage.src = field.roi_url;
+      const candidates = lastReport.ocr?.candidates?.[field.id] || [];
+      roiMeta.textContent = `${field.label} | ${field.source_label || sourceLabel(field.provider)} | ${field.provider}/${field.model} | ${field.message || '通过'}${field.needs_review ? ' | 需复核' : ''} | candidates=${candidates.length}`;
+      document.getElementById('fieldRaw').textContent = JSON.stringify({
+        value: field.value,
+        normalized_value: field.normalized_value,
+        confidence: field.confidence,
+        needs_review: field.needs_review,
+        review_reason: field.review_reason,
+        raw: field.raw,
+        candidates: candidates.slice(0, 5)
+      }, null, 2);
+    }
+
+    function sectionName(section) {
+      return ({
+        oil: '滑油栏',
+        fault_action: '故障报告 / 处理措施',
+        apu: 'APU',
+        airworthiness_release: '适航放行'
+      })[section] || section;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function sourceLabel(provider) {
+      if (provider === 'vision-rule') return 'Checkbox';
+      if (String(provider).includes('fallback_cleaner')) return 'PP-OCR';
+      if (provider === 'siliconflow' || provider === 'aliyun') return 'Cleaner';
+      if (provider === 'mock') return 'Unresolved';
+      return 'ROI-VLM';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,750 @@
+{
+  "oil_last_row_added": [
+    {
+      "block_id": "b0107",
+      "text": "0",
+      "block_score": 0.9994138479232788,
+      "assignment_score": 3.270535271156457,
+      "box": [
+        100.0,
+        311.0,
+        118.0,
+        332.0
+      ],
+      "center": [
+        109.0,
+        321.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0096",
+      "text": "0",
+      "block_score": 0.9907779693603516,
+      "assignment_score": 3.2561445594027965,
+      "box": [
+        99.0,
+        291.0,
+        118.0,
+        309.0
+      ],
+      "center": [
+        108.5,
+        300.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0117",
+      "text": "0",
+      "block_score": 0.9994937181472778,
+      "assignment_score": 3.240997428679514,
+      "box": [
+        102.0,
+        335.0,
+        121.0,
+        354.0
+      ],
+      "center": [
+        111.5,
+        344.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0085",
+      "text": "0",
+      "block_score": 0.9998050332069397,
+      "assignment_score": 3.2306909827696644,
+      "box": [
+        98.0,
+        267.0,
+        116.0,
+        287.0
+      ],
+      "center": [
+        107.0,
+        277.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0129",
+      "text": "0",
+      "block_score": 0.9992024302482605,
+      "assignment_score": 3.2136853083718364,
+      "box": [
+        98.0,
+        357.0,
+        116.0,
+        375.0
+      ],
+      "center": [
+        107.0,
+        366.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0106",
+      "text": "3",
+      "block_score": 0.9999939203262329,
+      "assignment_score": 3.204117301765669,
+      "box": [
+        41.0,
+        311.0,
+        54.0,
+        326.0
+      ],
+      "center": [
+        47.5,
+        318.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0095",
+      "text": "2",
+      "block_score": 0.9999886751174927,
+      "assignment_score": 3.204017476429422,
+      "box": [
+        44.0,
+        290.0,
+        56.0,
+        305.0
+      ],
+      "center": [
+        50.0,
+        297.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0084",
+      "text": "1",
+      "block_score": 0.998521625995636,
+      "assignment_score": 3.1907501167749315,
+      "box": [
+        45.0,
+        267.0,
+        56.0,
+        283.0
+      ],
+      "center": [
+        50.5,
+        275.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    }
+  ],
+  "oil_qty": [
+    {
+      "block_id": "b0108",
+      "text": "19.5",
+      "block_score": 0.9987013339996338,
+      "assignment_score": 3.258454863347468,
+      "box": [
+        161.0,
+        312.0,
+        204.0,
+        335.0
+      ],
+      "center": [
+        182.5,
+        323.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0097",
+      "text": "19.5",
+      "block_score": 0.9996286630630493,
+      "assignment_score": 3.251632980082182,
+      "box": [
+        161.0,
+        291.0,
+        202.0,
+        314.0
+      ],
+      "center": [
+        181.5,
+        302.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0118",
+      "text": "19.5",
+      "block_score": 0.9927990436553955,
+      "assignment_score": 3.2163622464202044,
+      "box": [
+        160.0,
+        332.0,
+        199.0,
+        359.0
+      ],
+      "center": [
+        179.5,
+        345.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0086",
+      "text": "17.5",
+      "block_score": 0.998911440372467,
+      "assignment_score": 3.2101918260999884,
+      "box": [
+        157.0,
+        270.0,
+        194.0,
+        292.0
+      ],
+      "center": [
+        175.5,
+        281.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0127",
+      "text": "19.5",
+      "block_score": 0.9998214244842529,
+      "assignment_score": 3.1762021598103134,
+      "box": [
+        155.0,
+        355.0,
+        197.0,
+        382.0
+      ],
+      "center": [
+        176.0,
+        368.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0087",
+      "text": "0",
+      "block_score": 0.9790927171707153,
+      "assignment_score": 2.257206016258261,
+      "box": [
+        232.0,
+        276.0,
+        252.0,
+        294.0
+      ],
+      "center": [
+        242.0,
+        285.0
+      ],
+      "reason": "overlap=0.40,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0130",
+      "text": "0",
+      "block_score": 0.9910591244697571,
+      "assignment_score": 2.022771450680189,
+      "box": [
+        235.0,
+        363.0,
+        254.0,
+        380.0
+      ],
+      "center": [
+        244.5,
+        371.5
+      ],
+      "reason": "overlap=0.26,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0098",
+      "text": "0",
+      "block_score": 0.9261118173599243,
+      "assignment_score": 1.7186915101272149,
+      "box": [
+        239.0,
+        295.0,
+        257.0,
+        314.0
+      ],
+      "center": [
+        248.0,
+        304.5
+      ],
+      "reason": "overlap=0.06,center_near,pattern=0.90"
+    }
+  ],
+  "fault_flight_no": [],
+  "fault_station": [
+    {
+      "block_id": "b0140",
+      "text": "重庆",
+      "block_score": 0.9981932640075684,
+      "assignment_score": 3.17128736341711,
+      "box": [
+        235.0,
+        391.0,
+        292.0,
+        422.0
+      ],
+      "center": [
+        263.5,
+        406.5
+      ],
+      "reason": "overlap=0.97,center_near,pattern=1.00"
+    }
+  ],
+  "fault_reported_by": [],
+  "crew_checkbox": [],
+  "mechanic_checkbox": [],
+  "fault_report_en": [
+    {
+      "block_id": "b0160",
+      "text": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
+      "block_score": 0.888821542263031,
+      "assignment_score": 3.083148281369476,
+      "box": [
+        73.0,
+        465.0,
+        435.0,
+        502.0
+      ],
+      "center": [
+        254.0,
+        483.5
+      ],
+      "reason": "overlap=0.97,center_near,pattern=0.80"
+    },
+    {
+      "block_id": "b0155",
+      "text": "降信息EW: COND AFT CRG ISOL VALVE",
+      "block_score": 0.9430546164512634,
+      "assignment_score": 2.8402731421041842,
+      "box": [
+        73.0,
+        430.0,
+        384.0,
+        463.0
+      ],
+      "center": [
+        228.5,
+        446.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.35"
+    },
+    {
+      "block_id": "b0174",
+      "text": "航班号",
+      "block_score": 0.9999133944511414,
+      "assignment_score": 0.7848775784997708,
+      "box": [
+        58.0,
+        540.0,
+        95.0,
+        555.0
+      ],
+      "center": [
+        76.5,
+        547.5
+      ],
+      "reason": "center_near"
+    },
+    {
+      "block_id": "b0173",
+      "text": "2",
+      "block_score": 0.9999972581863403,
+      "assignment_score": 0.7524843172634517,
+      "box": [
+        26.0,
+        544.0,
+        38.0,
+        560.0
+      ],
+      "center": [
+        32.0,
+        552.0
+      ],
+      "reason": "center_near"
+    },
+    {
+      "block_id": "b0177",
+      "text": "□机组 口机务",
+      "block_score": 0.8821545243263245,
+      "assignment_score": 0.6496737495684783,
+      "box": [
+        428.0,
+        543.0,
+        495.0,
+        558.0
+      ],
+      "center": [
+        461.5,
+        550.5
+      ],
+      "reason": "center_near"
+    }
+  ],
+  "fault_ref": [
+    {
+      "block_id": "b0146",
+      "text": "TSM21-28-00-810-802A",
+      "block_score": 0.8748223185539246,
+      "assignment_score": 3.233089739533243,
+      "box": [
+        588.0,
+        399.0,
+        755.0,
+        423.0
+      ],
+      "center": [
+        671.5,
+        411.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=1.00"
+    },
+    {
+      "block_id": "b0156",
+      "text": "依据TSM完成3A步骤，实成后维轮通风操作测试，测试正常",
+      "block_score": 0.8159302473068237,
+      "assignment_score": 2.250002642141018,
+      "box": [
+        547.0,
+        429.0,
+        993.0,
+        458.0
+      ],
+      "center": [
+        770.0,
+        443.5
+      ],
+      "reason": "overlap=0.50,center_near,pattern=0.85"
+    },
+    {
+      "block_id": "b0158",
+      "text": "Ref Tsm finish 3A stleps, fimish operatiomal test of the Aft cargo ventilatia, test ok",
+      "block_score": 0.9511660933494568,
+      "assignment_score": 1.578109612249779,
+      "box": [
+        549.0,
+        453.0,
+        1169.0,
+        492.0
+      ],
+      "center": [
+        859.0,
+        472.5
+      ],
+      "reason": "overlap=0.08,pattern=0.85"
+    }
+  ],
+  "fault_action_station": [],
+  "fault_date": [],
+  "fault_worker_sign": [
+    {
+      "block_id": "b0166",
+      "text": "工作者签名SIGN",
+      "block_score": 0.9986956715583801,
+      "assignment_score": 2.99595943597813,
+      "box": [
+        1017.0,
+        507.0,
+        1099.0,
+        526.0
+      ],
+      "center": [
+        1058.0,
+        516.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.55"
+    },
+    {
+      "block_id": "b0165",
+      "text": "安装序号S/N ON",
+      "block_score": 0.9820888638496399,
+      "assignment_score": 1.574591961453311,
+      "box": [
+        913.0,
+        509.0,
+        997.0,
+        523.0
+      ],
+      "center": [
+        955.0,
+        516.0
+      ],
+      "reason": "overlap=0.17,pattern=0.55"
+    }
+  ],
+  "fault_authorization": [],
+  "apu_cum_hours": [
+    {
+      "block_id": "b0247",
+      "text": "2238",
+      "block_score": 0.999990701675415,
+      "assignment_score": 2.255988561916202,
+      "box": [
+        322.0,
+        911.0,
+        386.0,
+        948.0
+      ],
+      "center": [
+        354.0,
+        929.5
+      ],
+      "reason": "overlap=0.38,center_near,pattern=0.90"
+    }
+  ],
+  "apu_cum_cycles": [
+    {
+      "block_id": "b0243",
+      "text": "348",
+      "block_score": 0.9999914765357971,
+      "assignment_score": 2.2099392541323186,
+      "box": [
+        403.0,
+        908.0,
+        461.0,
+        948.0
+      ],
+      "center": [
+        432.0,
+        928.0
+      ],
+      "reason": "overlap=0.35,center_near,pattern=0.90"
+    },
+    {
+      "block_id": "b0247",
+      "text": "2238",
+      "block_score": 0.999990701675415,
+      "assignment_score": 1.5528386172118949,
+      "box": [
+        322.0,
+        911.0,
+        386.0,
+        948.0
+      ],
+      "center": [
+        354.0,
+        929.5
+      ],
+      "reason": "overlap=0.01,pattern=0.90"
+    }
+  ],
+  "awr_service_completed": [
+    {
+      "block_id": "b0249",
+      "text": " 其他 OTHERS",
+      "block_score": 0.9143369793891907,
+      "assignment_score": 1.354261966562023,
+      "box": [
+        491.0,
+        918.0,
+        584.0,
+        932.0
+      ],
+      "center": [
+        537.5,
+        925.0
+      ],
+      "reason": "overlap=0.35,center_near"
+    },
+    {
+      "block_id": "b0244",
+      "text": "特后前PF&PRE",
+      "block_score": 0.9992151260375977,
+      "assignment_score": 1.2905453383112426,
+      "box": [
+        491.0,
+        903.0,
+        597.0,
+        920.0
+      ],
+      "center": [
+        544.0,
+        911.5
+      ],
+      "reason": "overlap=0.31,center_near"
+    },
+    {
+      "block_id": "b0241",
+      "text": "航后POSTFLT",
+      "block_score": 0.9851297736167908,
+      "assignment_score": 1.2678184556311431,
+      "box": [
+        491.0,
+        889.0,
+        590.0,
+        904.0
+      ],
+      "center": [
+        540.5,
+        896.5
+      ],
+      "reason": "overlap=0.33,center_near"
+    }
+  ],
+  "awr_station": [
+    {
+      "block_id": "b0242",
+      "text": "重庆",
+      "block_score": 0.998939037322998,
+      "assignment_score": 3.315687164257522,
+      "box": [
+        672.0,
+        892.0,
+        755.0,
+        932.0
+      ],
+      "center": [
+        713.5,
+        912.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=1.00"
+    }
+  ],
+  "awr_date": [
+    {
+      "block_id": "b0245",
+      "text": "2026.06.11",
+      "block_score": 0.999565601348877,
+      "assignment_score": 3.339500591449453,
+      "box": [
+        742.0,
+        901.0,
+        833.0,
+        932.0
+      ],
+      "center": [
+        787.5,
+        916.5
+      ],
+      "reason": "overlap=1.00,center_near,pattern=1.00"
+    }
+  ],
+  "awr_deferred_item": [
+    {
+      "block_id": "b0248",
+      "text": "□是YES 否NO",
+      "block_score": 0.8677803874015808,
+      "assignment_score": 1.4890705224085563,
+      "box": [
+        848.0,
+        904.0,
+        960.0,
+        925.0
+      ],
+      "center": [
+        904.0,
+        914.5
+      ],
+      "reason": "overlap=0.52,center_near"
+    },
+    {
+      "block_id": "b0250",
+      "text": "飞机技术状态满足适航要求，适合飞行，The A/C is considered fit for Release to Service",
+      "block_score": 0.9935399889945984,
+      "assignment_score": 1.0902280785435148,
+      "box": [
+        681.0,
+        931.0,
+        1077.0,
+        949.0
+      ],
+      "center": [
+        879.0,
+        940.0
+      ],
+      "reason": "overlap=0.27"
+    },
+    {
+      "block_id": "b0236",
+      "text": "DEFERRED ITEM",
+      "block_score": 0.9736460447311401,
+      "assignment_score": 0.7923938135235742,
+      "box": [
+        857.0,
+        876.0,
+        956.0,
+        890.0
+      ],
+      "center": [
+        906.5,
+        883.0
+      ],
+      "reason": "overlap=0.05,center_near"
+    },
+    {
+      "block_id": "b0237",
+      "text": "RELEASESION",
+      "block_score": 0.9906015396118164,
+      "assignment_score": 0.7172047536225935,
+      "box": [
+        982.0,
+        876.0,
+        1068.0,
+        890.0
+      ],
+      "center": [
+        1025.0,
+        883.0
+      ],
+      "reason": "overlap=0.02,center_near"
+    }
+  ],
+  "awr_release_sign": [
+    {
+      "block_id": "b0237",
+      "text": "RELEASESION",
+      "block_score": 0.9906015396118164,
+      "assignment_score": 2.9620639694808917,
+      "box": [
+        982.0,
+        876.0,
+        1068.0,
+        890.0
+      ],
+      "center": [
+        1025.0,
+        883.0
+      ],
+      "reason": "overlap=1.00,center_near,pattern=0.55"
+    },
+    {
+      "block_id": "b0250",
+      "text": "飞机技术状态满足适航要求，适合飞行，The A/C is considered fit for Release to Service",
+      "block_score": 0.9935399889945984,
+      "assignment_score": 1.7438496688756795,
+      "box": [
+        681.0,
+        931.0,
+        1077.0,
+        949.0
+      ],
+      "center": [
+        879.0,
+        940.0
+      ],
+      "reason": "overlap=0.32,pattern=0.55"
+    },
+    {
+      "block_id": "b0248",
+      "text": "□是YES 否NO",
+      "block_score": 0.8677803874015808,
+      "assignment_score": 1.400487103512622,
+      "box": [
+        848.0,
+        904.0,
+        960.0,
+        925.0
+      ],
+      "center": [
+        904.0,
+        914.5
+      ],
+      "reason": "overlap=0.10,pattern=0.55"
+    }
+  ],
+  "awr_license": []
+}

@@ -1,0 +1,190 @@
+canonical: {width: 2400, height: 1784}
+fields:
+  - id: oil_last_row_added
+    label: 滑油最后一排-加注量
+    section: oil
+    bbox: [125, 635, 520, 58]
+    recognizer: numeric_text
+    validator: int_range
+    params: {min: 0, max: 4}
+    fail_msg: 加注量应为0-4
+    assignment: {search_bbox: [0, 430, 380, 260], value_type: numeric, row: last}
+  - id: oil_qty
+    label: 滑油最后一排-滑油量
+    section: oil
+    bbox: [245, 635, 395, 58]
+    recognizer: numeric_text
+    validator: int_range
+    params: {min: 15, max: 25}
+    fail_msg: 滑油量应为15-25
+    assignment: {search_bbox: [250, 430, 180, 260], value_type: numeric, row: last}
+
+  - id: fault_flight_no
+    label: 故障报告-航班号
+    section: fault_action
+    bbox: [28, 720, 170, 56]
+    recognizer: keyed_text
+    validator: exact_text
+    params: {allow: ["N/A"]}
+    fail_msg: 航班号不是N/A
+    assignment: {search_bbox: [0, 680, 230, 120], value_type: closed, allow_global_value_match: false}
+  - id: fault_station
+    label: 故障报告-地点
+    section: fault_action
+    bbox: [198, 720, 305, 56]
+    recognizer: keyed_text
+    validator: exact_text
+    params: {allow: ["重庆", "Chongqing"]}
+    fail_msg: 地点不是重庆
+    assignment: {search_bbox: [0, 660, 520, 140], value_type: closed, allow_global_value_match: false}
+  - id: fault_reported_by
+    label: 故障报告-报告人
+    section: fault_action
+    bbox: [503, 720, 265, 56]
+    recognizer: keyed_text
+    validator: exact_text
+    params: {allow: ["张三", "Zhang San"]}
+    fail_msg: 报告人不是张三
+    assignment: {search_bbox: [420, 675, 360, 120], value_type: closed, allow_global_value_match: false, prefer_roi_vlm: true}
+  - id: crew_checkbox
+    label: 故障报告-机组
+    section: fault_action
+    bbox: [772, 724, 34, 34]
+    recognizer: checkbox
+    validator: checked
+    params: {}
+    fail_msg: 机组未勾选
+  - id: mechanic_checkbox
+    label: 故障报告-机务
+    section: fault_action
+    bbox: [838, 724, 34, 34]
+    recognizer: checkbox
+    validator: checked
+    params: {}
+    fail_msg: 机务未勾选
+  - id: fault_report_en
+    label: 故障报告-英文内容
+    section: fault_action
+    bbox: [28, 775, 875, 155]
+    recognizer: free_text
+    validator: english_text
+    params: {min_letters: 1}
+    fail_msg: 故障报告不是英文
+    assignment: {search_bbox: [0, 760, 760, 190], value_type: english, merge: line}
+  - id: fault_ref
+    label: 处理措施-参考手册
+    section: fault_action
+    bbox: [900, 700, 515, 72]
+    recognizer: keyed_text
+    validator: prefix_or_exact
+    params: {prefixes: ["AMM", "TSM"], allow_exact: ["N/A"]}
+    fail_msg: 参考手册不合规
+    assignment: {search_bbox: [820, 680, 560, 140], value_type: ref}
+  - id: fault_action_station
+    label: 处理措施-地点
+    section: fault_action
+    bbox: [1740, 720, 190, 56]
+    recognizer: keyed_text
+    validator: exact_text
+    params: {allow: ["重庆", "Chongqing"]}
+    fail_msg: 处理地点不是重庆
+    assignment: {search_bbox: [1640, 670, 330, 130], value_type: closed, allow_global_value_match: false}
+  - id: fault_date
+    label: 处理措施-日期
+    section: fault_action
+    bbox: [1930, 720, 260, 56]
+    recognizer: date_text
+    validator: same_day
+    params: {}
+    fail_msg: 日期不是今天
+    assignment: {search_bbox: [1880, 675, 340, 130], value_type: date, merge: date}
+  - id: fault_worker_sign
+    label: 处理措施-工作者签名
+    section: fault_action
+    bbox: [1865, 910, 175, 58]
+    recognizer: signature_or_text
+    validator: exact_text_or_ocr_match
+    params: {allow: ["张三", "Zhang San"], fuzzy_max_edits: 1}
+    fail_msg: 工作者签名不是张三
+    assignment: {search_bbox: [1760, 895, 260, 110], value_type: signature, prefer_roi_vlm: true, needs_review: true}
+  - id: fault_authorization
+    label: 处理措施-授权号
+    section: fault_action
+    bbox: [2040, 910, 310, 58]
+    recognizer: keyed_text
+    validator: regex
+    params: {pattern: "^[0-9]{6}$"}
+    fail_msg: 授权号不是6位数字
+    assignment: {search_bbox: [1990, 895, 360, 110], value_type: authorization, prefer_roi_vlm: true, needs_review: true}
+
+  - id: apu_cum_hours
+    label: APU累计使用时间
+    section: apu
+    bbox: [505, 1678, 230, 100]
+    recognizer: numeric_text
+    validator: digit_length
+    params: {allow_lengths: [4, 5]}
+    fail_msg: APU时间不是4或5位
+    assignment: {search_bbox: [500, 1660, 220, 124], value_type: numeric}
+  - id: apu_cum_cycles
+    label: APU累计使用循环
+    section: apu
+    bbox: [690, 1678, 230, 100]
+    recognizer: numeric_text
+    validator: digit_length
+    params: {allow_lengths: [4, 5]}
+    fail_msg: APU循环不是4或5位
+    assignment: {search_bbox: [690, 1660, 230, 124], value_type: numeric, roi_review: true, roi_review_always: true}
+
+  - id: awr_service_completed
+    label: 适航放行-完成维护类别
+    section: airworthiness_release
+    bbox: [925, 1578, 58, 118]
+    recognizer: checkbox
+    validator: checked
+    params: {}
+    fail_msg: 维护类别未勾选
+  - id: awr_station
+    label: 适航放行-地点
+    section: airworthiness_release
+    bbox: [1250, 1580, 180, 115]
+    recognizer: keyed_text
+    validator: exact_text
+    params: {allow: ["重庆", "Chongqing"]}
+    fail_msg: 放行地点不是重庆
+    assignment: {search_bbox: [1120, 1550, 260, 170], value_type: closed, allow_global_value_match: false}
+  - id: awr_date
+    label: 适航放行-日期
+    section: airworthiness_release
+    bbox: [1430, 1580, 180, 115]
+    recognizer: date_text
+    validator: same_day
+    params: {}
+    fail_msg: 放行日期不是今天
+    assignment: {search_bbox: [1250, 1550, 330, 180], value_type: date, merge: date}
+  - id: awr_deferred_item
+    label: 适航放行-保留项目
+    section: airworthiness_release
+    bbox: [1615, 1580, 190, 115]
+    recognizer: checkbox
+    validator: checked
+    params: {}
+    fail_msg: 保留项目未勾选
+  - id: awr_release_sign
+    label: 适航放行-放行签署
+    section: airworthiness_release
+    bbox: [1805, 1580, 180, 115]
+    recognizer: signature_or_text
+    validator: present_and_match
+    params: {compare_to: "fault_worker_sign", fuzzy_max_edits: 1}
+    fail_msg: 放行签署缺失
+    assignment: {search_bbox: [1700, 1550, 270, 170], value_type: signature, prefer_roi_vlm: true, needs_review: true}
+  - id: awr_license
+    label: 适航放行-执照号
+    section: airworthiness_release
+    bbox: [1985, 1580, 330, 115]
+    recognizer: keyed_text
+    validator: regex
+    params: {pattern: "^CAACML[0-9]{8}$"}
+    fail_msg: 执照号不合规
+    assignment: {search_bbox: [1900, 1550, 440, 170], value_type: license, prefer_roi_vlm: true, needs_review: true}

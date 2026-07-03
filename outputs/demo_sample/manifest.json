@@ -1,0 +1,17 @@
+{
+  "id": "demo_sample",
+  "title": "飞行记录单示例",
+  "description": "缓存示例，不调用云端模型。",
+  "images": {
+    "upload": "/outputs/demo_sample/sample_01.jpg",
+    "warped": "/outputs/demo_sample/warped.png",
+    "ocr": "/outputs/demo_sample/ocr_image.jpg",
+    "scan_base": "/outputs/demo_sample/base_scan.jpg",
+    "gpt_base": "/outputs/demo_sample/gpt_base.png"
+  },
+  "artifacts": {
+    "report": "/outputs/demo_sample/report.json",
+    "field_candidates": "/outputs/demo_sample/field_candidates.json",
+    "ocr_blocks": "/outputs/demo_sample/ocr_blocks.json"
+  }
+}

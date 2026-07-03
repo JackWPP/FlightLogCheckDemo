@@ -1,0 +1,27 @@
+{
+  "source": "template_photo_registration.png",
+  "target": "template_registration.png",
+  "homography": [
+    [
+      1.0588238203086593,
+      -0.06305790102071444,
+      22.572881531739416
+    ],
+    [
+      0.04471724118740515,
+      1.0207169900006974,
+      -56.70550864218548
+    ],
+    [
+      3.2491427311978266e-05,
+      -3.142865965935576e-05,
+      1.0
+    ]
+  ],
+  "stats": {
+    "source_features": 10000,
+    "target_features": 10001,
+    "good_matches": 2168,
+    "inliers": 871
+  }
+}

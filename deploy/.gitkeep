@@ -1,0 +1,2 @@
+# Keep this directory tracked even when it's empty (certbot drops certs here on the server).
+# The certificates themselves are NOT committed — see .gitignore at repo root.

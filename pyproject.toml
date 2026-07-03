@@ -1,0 +1,32 @@
+[project]
+name = "flight-log-check-demo"
+version = "0.1.0"
+description = "Flight log form registration, ROI extraction, VLM/OCR recognition, and rule-check demo."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.111",
+  "numpy>=1.26,<2",
+  "opencv-python-headless==4.10.0.84",
+  "pillow>=10",
+  "python-multipart>=0.0.9",
+  "pyyaml>=6",
+  "requests>=2.31",
+  "tzdata>=2025.2",
+  "uvicorn[standard]>=0.30",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+]
+
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

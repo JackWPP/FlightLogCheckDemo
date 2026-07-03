@@ -1,0 +1,45 @@
+{
+  "source": "assets\\raw\\base_scan.jpg",
+  "width": 2400,
+  "height": 1784,
+  "scanned_input": true,
+  "template_png": "scanner-cleaned black/white base for ROI and demo display",
+  "template_registration_png": "color warped base for feature matching",
+  "template_photo_registration_png": "phone-photo warped base for feature matching fallback",
+  "corners": [
+    [
+      0,
+      0
+    ],
+    [
+      4095,
+      0
+    ],
+    [
+      4095,
+      3043
+    ],
+    [
+      0,
+      3043
+    ]
+  ],
+  "homography": [
+    [
+      0.5859375,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.5859375,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "generated_at": "2026-07-02T23:25:27"
+}

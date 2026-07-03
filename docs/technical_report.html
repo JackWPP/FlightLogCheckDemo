@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>飞行记录单自动核查 Demo 技术报告</title>
+  <style>
+    :root {
+      --ink: #16202a;
+      --muted: #687684;
+      --line: #dce3ea;
+      --bg: #f5f7f9;
+      --panel: #ffffff;
+      --accent: #1f6fb2;
+      --good: #157f5b;
+      --bad: #c73b32;
+      --warn: #aa741a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font: 15px/1.65 "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    header {
+      padding: 42px 56px 30px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 { margin: 0 0 10px; font-size: 34px; line-height: 1.2; letter-spacing: 0; }
+    h2 { margin: 34px 0 14px; font-size: 23px; }
+    h3 { margin: 22px 0 10px; font-size: 17px; }
+    p { margin: 8px 0; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 2px rgba(20, 30, 40, 0.04);
+    }
+    .subtitle { color: var(--muted); max-width: 900px; font-size: 17px; }
+    .grid { display: grid; gap: 14px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfd;
+    }
+    .metric strong { display: block; font-size: 26px; line-height: 1.1; }
+    .metric span { color: var(--muted); font-size: 13px; }
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 9px;
+      margin: 2px 4px 2px 0;
+      color: var(--muted);
+      background: #fff;
+      font-size: 13px;
+    }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .warn { color: var(--warn); }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .step {
+      min-height: 94px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfd;
+    }
+    .step b { display: block; margin-bottom: 5px; }
+    .step small { color: var(--muted); }
+    figure { margin: 0; }
+    figure img {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      background: #eef2f5;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    figcaption { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { background: #f7f9fb; font-weight: 700; }
+    code {
+      background: #eef2f5;
+      border: 1px solid #dde5ec;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+    }
+    pre {
+      overflow: auto;
+      background: #111820;
+      color: #e8eef5;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 13px;
+    }
+    ul { margin-top: 8px; }
+    @media (max-width: 900px) {
+      header { padding: 28px 22px; }
+      main { padding: 14px; }
+      .grid.cols-2, .grid.cols-3, .flow { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>飞行记录单自动核查 Demo 技术报告</h1>
+    <p class="subtitle">本项目面向固定版式飞行记录单，演示如何将手机拍摄表单转化为结构化字段，并根据业务规则输出最短问题列表。当前版本采用 PaddleOCR + LLM cleaner + 本地规则引擎 + ROI 级复核的混合架构。</p>
+    <p>
+      <span class="pill">PP-OCRv6</span>
+      <span class="pill">DeepSeek-V4-Flash</span>
+      <span class="pill">qwen3.7-plus ROI 复核</span>
+      <span class="pill">FastAPI 本地 Demo</span>
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <h2>1. 演示目标</h2>
+      <p>老板需要对飞行记录单中的少量关键字段做核查：滑油栏、故障报告/处理措施、APU 累计时间/循环、适航放行栏。系统不需要完整理解整张表，而是要稳定提取关键字段，并用最短文字指出哪里有问题。</p>
+      <div class="grid cols-3">
+        <div class="metric"><strong>21</strong><span>电子化字段</span></div>
+        <div class="metric"><strong>252</strong><span>默认示例 OCR blocks</span></div>
+        <div class="metric"><strong>12 / 21</strong><span>默认示例通过字段</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 核心 Pipeline</h2>
+      <div class="flow">
+        <div class="step"><b>上传/示例</b><small>默认加载缓存示例；上传新图才调用云端。</small></div>
+        <div class="step"><b>PP-OCRv6</b><small>原图输入，使用 PaddleOCR 自带文档矫正。</small></div>
+        <div class="step"><b>字段归属</b><small>根据 fields.yaml 将 OCR block 分配到字段。</small></div>
+        <div class="step"><b>LLM Cleaner</b><small>DeepSeek 清洗字段值，不做最终判定。</small></div>
+        <div class="step"><b>规则引擎</b><small>本地 validators 做 pass/fail。</small></div>
+        <div class="step"><b>ROI 复核</b><small>失败关键字段裁切扩展 ROI 再读一次。</small></div>
+      </div>
+      <p>重要调整：PP-OCRv6 不再吃我们自己的 warped 图，而是直接读取原始上传图。图像矫正交给 PaddleOCR 的文档预处理，避免二次变形造成文字块错位。</p>
+    </section>
+
+    <section>
+      <h2>3. 模型分工</h2>
+      <table>
+        <tr><th>模块</th><th>当前模型/方法</th><th>职责边界</th></tr>
+        <tr><td>整页 OCR</td><td><code>PP-OCRv6</code></td><td>文档矫正、文字检测、文字识别、输出 box 和 score。</td></tr>
+        <tr><td>字段清洗</td><td><code>deepseek-ai/DeepSeek-V4-Flash</code></td><td>从候选文字中选择字段值、归一化日期/编号/英文内容。</td></tr>
+        <tr><td>ROI 复核</td><td><code>qwen3.7-plus</code></td><td>只对关键失败字段的小图做二次识别，成功后替换原值。</td></tr>
+        <tr><td>最终判定</td><td>本地规则</td><td>范围、正则、日期、checkbox、英文判断等，LLM 不直接决定合规。</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. 默认演示截图与证据</h2>
+      <div class="grid cols-2">
+        <figure>
+          <img src="../outputs/demo_sample/sample_01.jpg" alt="原始飞行记录单照片">
+          <figcaption>原始上传图。PP-OCRv6 直接使用这张图做文档矫正和 OCR。</figcaption>
+        </figure>
+        <figure>
+          <img src="../outputs/demo_sample/ocr_image.jpg" alt="PP-OCRv6 检测图">
+          <figcaption>PP-OCRv6 检测图。颜色框表示识别到的文本区域。</figcaption>
+        </figure>
+      </div>
+      <div class="grid cols-2" style="margin-top:14px">
+        <figure>
+          <img src="../outputs/demo_sample/warped.png" alt="配准图">
+          <figcaption>配准图。主要用于 ROI 证据和字段级兜底裁切。</figcaption>
+        </figure>
+        <figure>
+          <img src="../outputs/demo_sample/rois/apu_cum_cycles.png" alt="APU 累计使用循环 ROI">
+          <figcaption>APU 累计使用循环 ROI。主 OCR 读成 348，ROI 复核读成 3481。</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. ROI 复核案例：APU 累计使用循环</h2>
+      <p>在默认示例中，整页 OCR 和 cleaner 一开始将 APU 累计使用循环读为 <code>348</code>，未满足“4 或 5 位数字”的规则。系统随后裁切扩展 ROI，调用视觉模型复核，得到 <code>3481</code>，并重新通过本地 validator。</p>
+      <table>
+        <tr><th>阶段</th><th>值</th><th>结果</th><th>说明</th></tr>
+        <tr><td>PP-OCR + Cleaner</td><td><code>348</code></td><td class="bad">失败</td><td>只有 3 位，不满足 APU 循环规则。</td></tr>
+        <tr><td>ROI-VLM 复核</td><td><code>3481</code></td><td class="good">通过</td><td>扩展 ROI 识别出最后一位。</td></tr>
+        <tr><td>最终报告</td><td><code>3481</code></td><td class="good">通过</td><td>来源标记为 ROI-VLM，证据保留在 report.json。</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 字段和规则配置</h2>
+      <p>字段定义集中在 <code>fields.yaml</code>，每个字段包含 id、label、section、bbox、recognizer、validator、params、fail_msg 和 assignment。这样后续可以在不改代码的前提下微调字段框和候选搜索区域。</p>
+      <pre>id: apu_cum_cycles
+label: APU累计使用循环
+recognizer: numeric_text
+validator: digit_length
+params: {allow_lengths: [4, 5]}
+assignment:
+  search_bbox: [690, 1660, 230, 124]
+  value_type: numeric
+  roi_review: true
+  roi_review_always: true</pre>
+    </section>
+
+    <section>
+      <h2>7. Demo 使用方式</h2>
+      <ol>
+        <li>运行 <code>.\scripts\run_demo.ps1</code> 或 <code>uv run uvicorn formcheck.app:app --host 127.0.0.1 --port 8003</code>。</li>
+        <li>打开 <code>http://127.0.0.1:8003/</code>，默认展示缓存示例。</li>
+        <li>点击左侧按钮切换原图、配准图、OCR 图、扫描底图和 AI 底图。</li>
+        <li>点击中间字段行或右侧问题列表，查看 ROI 图、候选、cleaner 和复核证据。</li>
+        <li>切换“上传新图”后上传照片，系统会实时调用云端 OCR/VLM。</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>8. 当前局限与下一步</h2>
+      <ul>
+        <li>当前 base 来自样例照片和扫描件，不是真正空白表；拿到空白表后应重新生成 canonical。</li>
+        <li>姓名、签名、执照号等高风险字段仍建议保留人工复核标记。</li>
+        <li>字段搜索区还可以继续精修，尤其是日期、报告人、授权号等小字段。</li>
+        <li>如果进入生产，需要增加批量任务队列、模型调用重试、审计日志和权限控制。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>9. 交付结论</h2>
+      <p>当前 Demo 已经完成从图片到字段、从字段到规则、从失败字段到 ROI 复核、从结果到可视化证据的闭环。它不是简单 OCR 展示，而是一个可解释、可扩展、可持续调优的表单自动核查原型。</p>
+    </section>
+  </main>
+</body>
+</html>
