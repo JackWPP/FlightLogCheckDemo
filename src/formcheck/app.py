@@ -35,6 +35,11 @@ def index() -> FileResponse:
     return FileResponse(ROOT / "static" / "index.html")
 
 
+@app.get("/api/health")
+def health() -> dict:
+    return {"ok": True, "service": "flight-log-check"}
+
+
 @app.get("/report")
 def report() -> FileResponse:
     ensure_demo_sample()

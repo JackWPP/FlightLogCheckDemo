@@ -63,7 +63,7 @@ docker compose ps              # 两个容器都是 healthy/Up
 curl -fsS http://localhost:9080/api/demo | head -c 200
 
 # 跟健康检查同款端点
-curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:9080/api/demo
+curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:9080/api/health
 # 期望：200
 
 # 看日志
@@ -134,10 +134,13 @@ docker compose down
 ## 9. 常见问题
 
 **Q：上传图片后页面一直"核查中"，但服务没崩？**
-A：大概率 PP-OCRv6 / VLM 那一头在排队。把 `proxy_read_timeout` 调到 180s，或者看一下 `docker compose logs app` 里有没有 4xx/5xx。
+A：大概率 PP-OCRv6 / VLM 那一头在排队。先看该次 `out/<run_id>/report.json` 里的 `timings`，确认是 `ocr_ms` 还是 `review_ms` 慢；再看 `docker compose logs app` 里有没有 4xx/5xx。重复上传同一张图时应看到 `summary.ocr_cache_hit=true`。
 
 **Q：访问 `/api/demo` 返回 200，但前端图表是空白？**
 A：浏览器开发者工具看 Network 里 `/outputs/demo_sample/...` 是不是 404。是的话说明 demo 缓存没打进镜像——重新 `docker compose build --no-cache` 试试。
+
+**Q：健康检查 healthy，但上传还是失败？**
+A：健康检查只打 `/api/health`，不调用云端 OCR。上传失败优先看 `/api/config` 里的 `keys_configured`，再看上传结果中的 `ocr.error` 和 `timings`。
 
 **Q：`.env` 改了之后没生效？**
 A：`docker compose up -d` 不会重新加载 env。需要 `docker compose up -d --force-recreate app`。

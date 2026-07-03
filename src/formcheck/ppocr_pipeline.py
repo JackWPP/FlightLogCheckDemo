@@ -115,36 +115,51 @@ def load_ppocr_cache(cache_dir: Path, out_dir: Path) -> dict[str, Any] | None:
     meta_path = cache_dir / "job.json"
     if not blocks_path.exists():
         return None
-    out_dir.mkdir(parents=True, exist_ok=True)
-    blocks_json = json.loads(blocks_path.read_text(encoding="utf-8"))
-    blocks = [block_from_dict(item) for item in blocks_json]
-    shutil.copy2(blocks_path, out_dir / "ocr_blocks.json")
-    if meta_path.exists():
-        shutil.copy2(meta_path, out_dir / "job.json")
-    cached_image = cache_dir / "ocr_image_0.jpg"
-    image_path = None
-    if cached_image.exists():
-        image_path = out_dir / "ocr_image_0.jpg"
-        shutil.copy2(cached_image, image_path)
-    return {
-        "ok": True,
-        "error": None,
-        "blocks": blocks,
-        "blocks_json": blocks_json,
-        "ocr_image_path": image_path,
-        "ocr_image_url": None,
-        "job_id": "cache",
-        "cache_hit": True,
-    }
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        blocks_json = json.loads(blocks_path.read_text(encoding="utf-8"))
+        blocks = [block_from_dict(item) for item in blocks_json]
+        shutil.copy2(blocks_path, out_dir / "ocr_blocks.json")
+        if meta_path.exists():
+            shutil.copy2(meta_path, out_dir / "job.json")
+        cached_image = cache_dir / "ocr_image_0.jpg"
+        image_path = None
+        if cached_image.exists():
+            image_path = out_dir / "ocr_image_0.jpg"
+            shutil.copy2(cached_image, image_path)
+        return {
+            "ok": True,
+            "error": None,
+            "blocks": blocks,
+            "blocks_json": blocks_json,
+            "ocr_image_path": image_path,
+            "ocr_image_url": None,
+            "job_id": "cache",
+            "cache_hit": True,
+        }
+    except Exception as exc:  # noqa: BLE001
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "cache_error.json").write_text(
+            json.dumps({"cache_dir": str(cache_dir), "error": str(exc)}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return None
 
 
 def save_ppocr_cache(cache_dir: Path, blocks_json: list[dict[str, Any]], ocr_image_path: Path | None, job_meta: dict[str, Any]) -> None:
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    (cache_dir / "ocr_blocks.json").write_text(json.dumps(blocks_json, ensure_ascii=False, indent=2), encoding="utf-8")
-    meta = {**job_meta, "cache_saved_at": int(time.time())}
-    (cache_dir / "job.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-    if ocr_image_path and ocr_image_path.exists():
-        shutil.copy2(ocr_image_path, cache_dir / "ocr_image_0.jpg")
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "ocr_blocks.json").write_text(json.dumps(blocks_json, ensure_ascii=False, indent=2), encoding="utf-8")
+        meta = {**job_meta, "cache_saved_at": int(time.time())}
+        (cache_dir / "job.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        if ocr_image_path and ocr_image_path.exists():
+            shutil.copy2(ocr_image_path, cache_dir / "ocr_image_0.jpg")
+    except Exception as exc:  # noqa: BLE001
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "cache_save_error.json").write_text(
+            json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
 
 def extract_ppocr_blocks(records: list[dict[str, Any]]) -> list[OcrBlock]:

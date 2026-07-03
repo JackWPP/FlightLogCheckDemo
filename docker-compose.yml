@@ -28,10 +28,10 @@ services:
     expose:
       - "8003"
     healthcheck:
-      # Cheap endpoint that doesn't touch cloud APIs.
+      # Cheap endpoint that doesn't touch cloud APIs or demo artefacts.
       test: ["CMD", "python", "-c",
              "import urllib.request,sys; \
-              sys.exit(0 if urllib.request.urlopen('http://localhost:8003/api/demo',timeout=4).status==200 else 1)"]
+              sys.exit(0 if urllib.request.urlopen('http://localhost:8003/api/health',timeout=4).status==200 else 1)"]
       interval: 30s
       timeout: 5s
       retries: 3
