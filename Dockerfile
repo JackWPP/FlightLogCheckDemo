@@ -71,12 +71,12 @@ RUN mkdir -p /app/out /app/outputs/runtime
 
 EXPOSE 8003
 
-# Workers=2 is comfortable for a demo; raise if you front it with many users.
+# Workers=1 keeps the in-process SQLite task worker simple for the V2 demo.
 # --proxy-headers so X-Forwarded-* from nginx reaches FastAPI.
 # --timeout-keep-alive 120 because PP-OCRv6 + VLM review can take 30-90s.
 CMD ["uv", "run", "--python", "3.12", "--no-dev", \
      "uvicorn", "formcheck.app:app", \
      "--host", "0.0.0.0", "--port", "8003", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--proxy-headers", \
      "--timeout-keep-alive", "120"]

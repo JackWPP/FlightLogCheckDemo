@@ -8,6 +8,8 @@
 - OCR 主链路：原始上传图直接交给 PaddleOCR AI Studio `PP-OCRv6`，使用其内置文档矫正能力。
 - 字段结构化：PP-OCRv6 输出文字块后，本地按 `fields.yaml` 做字段归属，再用 DeepSeek cleaner 清洗为字段值。
 - 规则判断：所有 pass/fail 均由本地 validators 完成，不让 LLM 直接决定合规。
+- 审核友好问题列表：字段级失败全部保存在 `all_problems`，右侧展示问题由 LLM/本地兜底压缩到默认 4 条。
+- 持久任务队列：上传新图走 SQLite 任务队列，支持 pending/running/done/failed、批量上传和刷新恢复。
 - ROI 兜底：默认从 PaddleOCR 输出的 OCR 图与字段候选 blocks 裁切局部证据，再用视觉模型复核；只有复核值通过本地规则才替换。
 - 证据保留：每次运行保存 `report.json`、`field_candidates.json`、`ocr_blocks.json`、OCR 检测图、ROI 图。
 
@@ -47,6 +49,8 @@ copy .env.example .env
 - `ALIYUN_API_KEY`：ROI 级视觉复核，默认模型 `qwen3.7-plus`。
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型。
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
+- `CLEANER_REQUEST_TIMEOUT_SECONDS` / `ISSUE_TRIAGE_TIMEOUT_SECONDS`：Cleaner 与问题终裁超时，默认 `45`。
+- `ISSUE_DISPLAY_LIMIT`：右侧展示问题数量上限，默认 `4`；`all_problems` 不受影响。
 - `REGISTRATION_MODE`：默认 `off`。可选 `optional` / `required`，只在需要旧版 SIFT 配准 ROI 时开启。
 - `PPOCR_CACHE_ENABLED`：默认 `1`。同一张图片、同一组 PP-OCR 参数会复用 `outputs/runtime/ocr_cache/`，避免反复提交云端 OCR。
 - `PPOCR_POLL_INTERVAL_SECONDS` / `PPOCR_MAX_WAIT_SECONDS`：控制 PaddleOCR 异步 job 轮询间隔和最大等待时间。
@@ -75,6 +79,7 @@ fields.yaml             字段、ROI、规则和候选归属配置
   -> DeepSeek cleaner 清洗字段值
   -> 本地 validators 规则校验
   -> 从 PaddleOCR OCR 图/blocks 裁切失败关键字段 ROI，并发交给 ROI-VLM double check
+  -> LLM issue triage 压缩展示问题，保留 all_problems 全量证据
   -> Web 展示问题列表与证据
 ```
 
@@ -91,7 +96,9 @@ fields.yaml             字段、ROI、规则和候选归属配置
 - 需复核字段：8
 - APU 累计使用循环：主 OCR 读成 `348`，ROI-VLM 复核为 `3481` 后通过。
 
-上传新图的 `report.json` 会包含 `timings`，用于定位线上慢点，例如 `ocr_ms`、`ppocr_roi_ms`、`validate_ms`、`review_ms` 和 `total_ms`。`summary.ocr_cache_hit` 为 `true` 时表示本次整页 OCR 走缓存，没有重新访问 PaddleOCR 云端。
+上传新图的 `report.json` 会包含 `timings`，用于定位线上慢点，例如 `ppocr_submit_ms`、`ppocr_poll_ms`、`ppocr_download_ms`、`assignment_ms`、`cleaner_ms`、`review_ms`、`issue_triage_ms` 和 `total_ms`。`summary.ocr_cache_hit` 为 `true` 时表示本次整页 OCR 走缓存，没有重新访问 PaddleOCR 云端。
+
+任务队列数据保存在 `outputs/runtime/tasks.sqlite3`，Cleaner 缓存在 `outputs/runtime/cleaner_cache/`。同一张图重复上传时，PP-OCR 和 Cleaner 都会尽量复用缓存。
 
 ## 测试
 

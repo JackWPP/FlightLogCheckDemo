@@ -10,7 +10,8 @@ import traceback
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +19,7 @@ from .config import ASSETS_DIR, OUT_DIR, OUTPUTS_DIR, ROOT
 from .demo import demo_payload, ensure_demo_sample
 from .llm_cleaner import DEFAULT_CLEANER_MODEL
 from .pipeline import analyze_image, registration_mode
+from . import tasks
 
 
 app = FastAPI(title="Flight Log Check Demo")
@@ -27,6 +29,13 @@ app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 app.mount("/runs", StaticFiles(directory=OUT_DIR), name="runs")
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
+
+
+@app.on_event("startup")
+def startup() -> None:
+    tasks.init_db()
+    tasks.configure_processor(_process_task)
+    tasks.start_worker()
 
 
 @app.get("/")
@@ -76,6 +85,8 @@ def _public_config() -> dict:
         "registration_mode": registration_mode(),
         "ppocr_cache_enabled": os.getenv("PPOCR_CACHE_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"},
         "vlm_request_timeout_seconds": os.getenv("VLM_REQUEST_TIMEOUT_SECONDS", "45"),
+        "cleaner_request_timeout_seconds": os.getenv("CLEANER_REQUEST_TIMEOUT_SECONDS", "45"),
+        "issue_display_limit": os.getenv("ISSUE_DISPLAY_LIMIT", "4"),
         "keys_configured": keys,
         "ready_for_live_upload": all(keys.values()),
     }
@@ -96,6 +107,29 @@ def _save_upload(file: UploadFile) -> tuple[str, Path]:
     with upload_path.open("wb") as fh:
         shutil.copyfileobj(file.file, fh)
     return run_id, upload_path
+
+
+def _process_task(task: dict, progress_cb) -> dict:
+    cfg = _public_config()
+    upload_path = Path(task["upload_path"])
+    report = analyze_image(
+        upload_path,
+        provider=cfg["roi_provider"],
+        model=cfg["roi_model"] or None,
+        run_id=task["run_id"],
+        mode=cfg["mode"],
+        cleaner_provider=cfg["cleaner_provider"],
+        cleaner_model=cfg["cleaner_model"],
+        progress_cb=progress_cb,
+    )
+    report["run_id"] = task["run_id"]
+    report["task_id"] = task["task_id"]
+    report["session_id"] = task["session_id"]
+    report["upload_url"] = f"/runs/{task['run_id']}/{Path(task['upload_path']).name}"
+    (OUT_DIR / task["run_id"] / "report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return report
 
 
 @app.post("/api/analyze")
@@ -129,6 +163,64 @@ def analyze(
     report["run_id"] = run_id
     report["upload_url"] = f"/runs/{run_id}/{upload_path.name}"
     return report
+
+
+@app.post("/api/tasks")
+def create_task(
+    file: UploadFile = File(...),
+    session_id: str = Form("default"),
+) -> dict:
+    task = tasks.create_task(file, session_id)
+    return {"task": task}
+
+
+@app.post("/api/tasks/batch")
+def create_batch_tasks(
+    files: list[UploadFile] = File(...),
+    session_id: str = Form("default"),
+) -> dict:
+    created = [tasks.create_task(file, session_id) for file in files]
+    return {"tasks": created}
+
+
+@app.get("/api/tasks")
+def list_session_tasks(session_id: str = Query("default")) -> dict:
+    return {"tasks": tasks.list_tasks(session_id)}
+
+
+@app.get("/api/tasks/{task_id}")
+def get_task(task_id: str) -> dict:
+    try:
+        return {"task": tasks.get_task(task_id)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="task_not_found") from exc
+
+
+@app.get("/api/tasks/{task_id}/events")
+async def task_events(task_id: str) -> StreamingResponse:
+    async def event_gen():
+        last_payload = None
+        while True:
+            try:
+                task = tasks.get_task(task_id)
+            except KeyError:
+                yield f"data: {json.dumps({'stage': 'error', 'error': 'task_not_found'}, ensure_ascii=False)}\n\n"
+                break
+            payload = {
+                "task_id": task_id,
+                "status": task["status"],
+                "progress": task.get("progress") or {},
+                "task": task,
+            }
+            text = json.dumps(payload, ensure_ascii=False)
+            if text != last_payload:
+                yield f"data: {text}\n\n"
+                last_payload = text
+            if task["status"] in {"done", "failed", "cancelled"}:
+                break
+            await asyncio.sleep(1)
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 @app.post("/api/analyze/stream")

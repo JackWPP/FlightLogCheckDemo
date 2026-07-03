@@ -82,6 +82,30 @@
       overflow: auto;
       padding: 12px;
     }
+    .task-board {
+      display: grid;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfd;
+      max-height: 240px;
+      overflow: auto;
+    }
+    .task-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .task-card.running { border-color: #f2d39b; background: #fffaf0; }
+    .task-card.done { border-color: #b8e2d1; background: #f3fbf7; }
+    .task-card.failed { border-color: #efc0ba; background: #fff4f2; }
+    .task-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-card small { color: var(--muted); overflow-wrap: anywhere; }
     .viewer img { max-width: 100%; display: block; border: 1px solid var(--line); background: #fff; }
     .evidence-board {
       display: grid;
@@ -299,7 +323,7 @@
       </div>
     </div>
     <form id="uploadForm" class="toolbar">
-      <input id="fileInput" name="file" type="file" accept="image/*" required>
+      <input id="fileInput" name="file" type="file" accept="image/*" multiple required>
       <span id="configInfo" class="meta" style="font-size: 12px; color: var(--muted);">配置加载中…</span>
       <button class="primary" type="submit">开始核查</button>
     </form>
@@ -316,6 +340,7 @@
           <button id="showAiBase" type="button">AI底图</button>
         </div>
       </div>
+      <div id="taskBoard" class="task-board hidden"></div>
       <div class="viewer">
         <div id="demoViewer"><img id="mainImage" alt="上传或配准后的表单"></div>
         <div id="liveEvidence" class="evidence-board hidden"></div>
@@ -351,6 +376,11 @@
             <span class="label">ROI 复核</span>
             <span class="meta" data-label="优先使用 PaddleOCR ROI">优先使用 PaddleOCR ROI</span>
           </li>
+          <li data-stage="issue_triage" class="pending">
+            <span class="icon">⏳</span>
+            <span class="label">问题压缩</span>
+            <span class="meta" data-label="LLM 生成精简问题列表">LLM 生成精简问题列表</span>
+          </li>
         </ol>
         <ol id="problems" class="problem-list"></ol>
         <div class="evidence">
@@ -366,6 +396,8 @@
   <script>
     let lastReport = null;
     let lastManifest = null;
+    let currentTasks = [];
+    const sessionId = getSessionId();
     const uploadForm = document.getElementById('uploadForm');
     const fileInput = document.getElementById('fileInput');
     const mainImage = document.getElementById('mainImage');
@@ -379,6 +411,7 @@
     const roiMeta = document.getElementById('roiMeta');
     const candidateList = document.getElementById('candidateList');
     const summaryBox = document.getElementById('summary');
+    const taskBoard = document.getElementById('taskBoard');
 
     uploadForm.classList.add('hidden');
     document.addEventListener('DOMContentLoaded', loadDemo);
@@ -393,7 +426,11 @@
       document.getElementById('demoMode').classList.toggle('active', mode === 'demo');
       document.getElementById('uploadMode').classList.toggle('active', mode === 'upload');
       uploadForm.classList.toggle('hidden', mode !== 'upload');
-      if (mode === 'upload') renderLiveIdle();
+      taskBoard.classList.toggle('hidden', mode !== 'upload' || currentTasks.length === 0);
+      if (mode === 'upload') {
+        renderLiveIdle();
+        loadTasks();
+      }
     }
 
     async function loadDemo() {
@@ -424,9 +461,10 @@
 
     uploadForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (!fileInput.files[0]) return;
+      if (!fileInput.files.length) return;
       const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
+      for (const file of fileInput.files) formData.append('files', file);
+      formData.append('session_id', sessionId);
 
       // Reset UI for a new run.
       showProgress();
@@ -439,61 +477,109 @@
       candidateList.innerHTML = '';
       document.getElementById('fieldRaw').textContent = '';
 
-      let finalReport = null;
-      let uploadUrl = '';
-      const handleEvent = (data) => {
-        if (data.stage === 'started') {
-          uploadUrl = data.upload_url || '';
-          return;
-        }
-        if (data.stage === 'final') {
-          finalReport = data.report;
-        } else if (data.stage === 'error') {
-          statusBox.innerHTML =
-            `<strong>处理失败</strong><span class="meta">${escapeHtml(data.error || '')}</span>`;
-        } else {
-          setStage(data.stage, data.status, data);
-          if (data.stage === 'ocr' && data.status === 'done') {
-            renderLiveOcrEvidence(uploadUrl, data.ocr_image_url || '', data.ocr_blocks || []);
-          }
-        }
-      };
-
       try {
-        const response = await fetch('/api/analyze/stream', { method: 'POST', body: formData });
+        const response = await fetch('/api/tasks/batch', { method: 'POST', body: formData });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx;
-          while ((idx = buffer.indexOf('\n\n')) >= 0) {
-            const raw = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const line = raw.split('\n').find(l => l.startsWith('data: '));
-            if (!line) continue;
-            handleEvent(JSON.parse(line.slice(6)));
-          }
-        }
+        const payload = await response.json();
+        currentTasks = payload.tasks || [];
+        renderTasks();
+        currentTasks.forEach(task => watchTask(task.task_id));
       } catch (e) {
         statusBox.innerHTML =
           `<strong>请求失败</strong><span class="meta">${escapeHtml(e.message)}</span>`;
         return;
       }
+    });
 
-      if (finalReport) {
-        lastReport = finalReport;
+    function getSessionId() {
+      let value = localStorage.getItem('flight_log_session_id');
+      if (!value) {
+        value = `s_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+        localStorage.setItem('flight_log_session_id', value);
+      }
+      return value;
+    }
+
+    async function loadTasks() {
+      try {
+        const payload = await fetch(`/api/tasks?session_id=${encodeURIComponent(sessionId)}`).then(r => r.json());
+        currentTasks = payload.tasks || [];
+        renderTasks();
+        currentTasks.filter(task => ['pending', 'running'].includes(task.status)).forEach(task => watchTask(task.task_id));
+      } catch (e) {
+        taskBoard.innerHTML = `<span class="meta">任务列表加载失败：${escapeHtml(e.message)}</span>`;
+      }
+    }
+
+    function renderTasks() {
+      taskBoard.classList.toggle('hidden', currentTasks.length === 0);
+      taskBoard.innerHTML = currentTasks.map(taskCard).join('');
+      taskBoard.querySelectorAll('.task-card').forEach(card => {
+        card.addEventListener('click', () => selectTask(card.dataset.id));
+      });
+    }
+
+    function taskCard(task) {
+      const report = task.report || {};
+      const summary = report.summary || {};
+      const shortProblems = (report.problems || []).slice(0, 3).join('；');
+      const status = task.status || 'pending';
+      const stage = task.progress?.stage || status;
+      const totalMs = report.timings?.total_ms;
+      const meta = status === 'done'
+        ? `${summary.passed_count ?? 0} 通过 · ${summary.failed_count ?? 0} 失败 · ${totalMs ? (totalMs / 1000).toFixed(1) + 's' : '完成'}`
+        : status === 'failed'
+          ? (task.error || '处理失败')
+          : `阶段：${stage}`;
+      return `
+        <div class="task-card ${escapeAttr(status)}" data-id="${escapeAttr(task.task_id)}">
+          <strong>${escapeHtml(task.filename || task.task_id)}</strong>
+          <span class="badge ${status === 'done' ? 'pass' : status === 'failed' ? 'fail' : 'review'}">${escapeHtml(status)}</span>
+          <small>${escapeHtml(meta)}</small>
+          <small>${escapeHtml(shortProblems)}</small>
+        </div>
+      `;
+    }
+
+    function mergeTask(updated) {
+      const index = currentTasks.findIndex(task => task.task_id === updated.task_id);
+      if (index >= 0) currentTasks[index] = updated;
+      else currentTasks.unshift(updated);
+      renderTasks();
+    }
+
+    async function selectTask(taskId) {
+      const payload = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`).then(r => r.json());
+      const task = payload.task;
+      mergeTask(task);
+      if (task.report) {
+        lastReport = task.report;
         lastManifest = null;
         hideProgress();
-        render(finalReport);
+        render(task.report);
       } else {
-        statusBox.innerHTML =
-          '<strong>未拿到结果</strong><span class="meta">请看下方进度</span>';
+        statusBox.innerHTML = `<strong>${escapeHtml(task.status)}</strong><span class="meta">${escapeHtml(task.progress?.stage || '')}</span>`;
       }
-    });
+    }
+
+    function watchTask(taskId) {
+      const events = new EventSource(`/api/tasks/${encodeURIComponent(taskId)}/events`);
+      events.onmessage = (event) => {
+        const payload = JSON.parse(event.data);
+        if (payload.task) mergeTask(payload.task);
+        const progress = payload.progress || {};
+        if (progress.stage && progress.status) setStage(progress.stage, progress.status, progress);
+        if (progress.stage === 'ocr' && progress.status === 'done') {
+          const task = payload.task || {};
+          renderLiveOcrEvidence(task.upload_url || '', progress.ocr_image_url || '', progress.ocr_blocks || []);
+        }
+        if (payload.status === 'done' || payload.status === 'failed' || payload.status === 'cancelled') {
+          events.close();
+          if (payload.status === 'done' && payload.task?.report) mergeTask(payload.task);
+        }
+      };
+      events.onerror = () => events.close();
+    }
 
     function showProgress() {
       const list = document.getElementById('progress');

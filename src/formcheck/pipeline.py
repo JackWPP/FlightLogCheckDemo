@@ -15,7 +15,8 @@ from .crop import crop_roi, save_rois
 from .field_assignment import assign_blocks_to_fields, candidates_to_json, scale_bbox
 from .fields import load_fields
 from .image_io import imread, imwrite
-from .llm_cleaner import DEFAULT_CLEANER_MODEL, clean_field_values
+from .issue_triage import triage_issues
+from .llm_cleaner import DEFAULT_CLEANER_MODEL, clean_field_values_with_meta
 from .model_adapters import recognize_with_provider
 from .ppocr_pipeline import block_to_dict, run_ppocrv6
 from .recognizers import mock_recognize
@@ -71,6 +72,7 @@ def analyze_image(
          ocr_blocks=ocr_meta["public"].get("blocks") or [],
          error=ocr_meta["public"].get("error"))
     timings["ocr_ms"] = int((time.time() - t) * 1000)
+    timings.update(ocr_meta["public"].get("timings") or {})
     t_roi = time.time()
     ppocr_roi_paths = build_ppocr_roi_evidence(ocr_meta, fields, canonical, run_dir)
     timings["ppocr_roi_ms"] = int((time.time() - t_roi) * 1000)
@@ -177,10 +179,21 @@ def analyze_image(
 
     # --- Build report ------------------------------------------------------
     field_dicts = [_check_dict(check) for check in checks]
-    problems = [c.message for c in checks if not c.passed]
+    t = time.time()
+    emit("issue_triage", "running")
+    issue_result = triage_issues(field_dicts, provider=cleaner_provider, model=cleaner_model)
+    timings["issue_triage_ms"] = int((time.time() - t) * 1000)
+    emit("issue_triage", "done",
+         duration_ms=timings["issue_triage_ms"],
+         displayed=len(issue_result["problems"]),
+         total=len(issue_result["all_problems"]))
+    problems = issue_result["problems"]
+    all_problems = issue_result["all_problems"]
     report = {
-        "ok": not problems,
+        "ok": not all_problems,
         "problems": problems or ["通过"],
+        "all_problems": all_problems,
+        "issue_triage": issue_result["issue_triage"],
         "summary": build_summary(field_dicts, ocr_meta["public"]),
         "registration": _reg_dict(reg, reg_mode),
         "warped_url": warped_url,
@@ -255,10 +268,15 @@ def run_hybrid_ocr(
 
     ppocr = run_ppocrv6(ocr_input_path, run_dir)
     blocks = ppocr.get("blocks", [])
+    t = time.time()
     assignments = assign_blocks_to_fields(fields, blocks, (canonical["width"], canonical["height"]))
+    assignment_ms = int((time.time() - t) * 1000)
     candidates_json = candidates_to_json(assignments)
     (run_dir / "field_candidates.json").write_text(json.dumps(candidates_json, ensure_ascii=False, indent=2), encoding="utf-8")
-    cleaned = clean_field_values(fields, assignments, provider=cleaner_provider, model=cleaner_model) if blocks else {}
+    if blocks:
+        cleaned, cleaner_meta = clean_field_values_with_meta(fields, assignments, provider=cleaner_provider, model=cleaner_model)
+    else:
+        cleaned, cleaner_meta = {}, {"duration_ms": 0, "cache_hit": False, "skipped": True}
     ocr_image_path = ppocr.get("ocr_image_path")
     ocr_image_url = None
     if ocr_image_path:
@@ -275,6 +293,13 @@ def run_hybrid_ocr(
         "cleaner_provider": cleaner_provider,
         "cleaner_model": cleaner_model or DEFAULT_CLEANER_MODEL,
         "cache_hit": bool(ppocr.get("cache_hit")),
+        "timings": {
+            **(ppocr.get("timings") or {}),
+            "assignment_ms": assignment_ms,
+            "cleaner_ms": int(cleaner_meta.get("duration_ms") or 0),
+        },
+        "cleaner_cache_hit": bool(cleaner_meta.get("cache_hit")),
+        "cleaner_error": cleaner_meta.get("error"),
     }
     return {
         "cleaned_results": cleaned,
@@ -358,18 +383,34 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
 
 
 def review_check(check: FieldCheck, run_dir: Path, evidence_path: Path | None, warped) -> FieldCheck:
+    started = time.time()
     try:
         new_rec, new_passed, new_msg = roi_review_field(
             check.field, check.recognition, check.passed, check.message, run_dir,
             evidence_path=evidence_path, warped=warped,
         )
+        new_rec.raw = mark_roi_review_duration(new_rec.raw, int((time.time() - started) * 1000))
         return FieldCheck(check.field, new_rec, new_passed, new_msg, check.roi_url)
     except Exception as exc:  # noqa: BLE001
         rec = check.recognition
         rec.needs_review = True
         rec.review_reason = rec.review_reason or "ROI复核异常"
-        rec.raw = {**(rec.raw or {}), "roi_review_error": str(exc)}
+        rec.raw = {
+            **(rec.raw or {}),
+            "roi_review_error": str(exc),
+            "roi_review_duration_ms": int((time.time() - started) * 1000),
+        }
         return FieldCheck(check.field, rec, check.passed, check.message, check.roi_url)
+
+
+def mark_roi_review_duration(raw, duration_ms: int):
+    if not isinstance(raw, dict):
+        return raw
+    if isinstance(raw.get("roi_review"), dict):
+        raw["roi_review"]["duration_ms"] = duration_ms
+    else:
+        raw["roi_review_duration_ms"] = duration_ms
+    return raw
 
 
 def roi_review_field(

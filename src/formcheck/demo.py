@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import ASSETS_DIR, OUT_DIR, OUTPUTS_DIR
+from .issue_triage import triage_issues
 from .pipeline import build_summary, source_label
 
 
@@ -54,6 +55,10 @@ def demo_payload() -> dict[str, Any]:
         field.setdefault("needs_review", bool(high_risk or unresolved))
         field.setdefault("review_reason", "需人工复核" if field.get("needs_review") else "")
     report["summary"] = build_summary(report.get("fields", []), report.get("ocr", {}))
+    triage = triage_issues(report.get("fields", []), provider="mock")
+    report["all_problems"] = triage["all_problems"]
+    report["problems"] = triage["problems"]
+    report["issue_triage"] = triage["issue_triage"]
     return {"manifest": build_manifest(), "report": report}
 
 

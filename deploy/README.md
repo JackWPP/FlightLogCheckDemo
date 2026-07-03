@@ -55,9 +55,13 @@ PPOCR_POLL_INTERVAL_SECONDS=5
 PPOCR_MAX_WAIT_SECONDS=300
 ROI_REVIEW_CONCURRENCY=3
 VLM_REQUEST_TIMEOUT_SECONDS=45
+CLEANER_REQUEST_TIMEOUT_SECONDS=45
+ISSUE_TRIAGE_TIMEOUT_SECONDS=45
+ISSUE_DISPLAY_LIMIT=4
 ```
 
 其中 `REGISTRATION_MODE=off` 表示线上主链路不再跑本地 SIFT 配准；ROI 证据优先来自 PP-OCRv6 返回的矫正/检测图。
+上传任务和批量处理状态保存在 `outputs/runtime/tasks.sqlite3`；当前 Dockerfile 默认 `uvicorn --workers 1`，后续拆独立 worker 服务后再扩 Web worker。
 
 > **demo 模式**（点 "示例" 标签）不调用任何云端接口，所以即使 `.env` 全空，主页的缓存示例也能正常展示。
 
@@ -147,7 +151,7 @@ docker compose down
 ## 9. 常见问题
 
 **Q：上传图片后页面一直"核查中"，但服务没崩？**
-A：大概率 PP-OCRv6 / VLM 那一头在排队。先看该次 `out/<run_id>/report.json` 里的 `timings`，确认是 `ocr_ms` 还是 `review_ms` 慢；再看 `docker compose logs app` 里有没有 4xx/5xx。重复上传同一张图时应看到 `summary.ocr_cache_hit=true`。如果 `review_ms` 拖尾，可以临时把 `VLM_REQUEST_TIMEOUT_SECONDS` 调到 20-30，或把 `ROI_REVIEW_CONCURRENCY` 调到 1-2 降低供应商限流风险。
+A：大概率 PP-OCRv6 / VLM 那一头在排队。先看该次 `out/<run_id>/report.json` 里的 `timings`，确认是 `ppocr_poll_ms`、`cleaner_ms`、`review_ms` 还是 `issue_triage_ms` 慢；再看 `docker compose logs app` 里有没有 4xx/5xx。重复上传同一张图时应看到 `summary.ocr_cache_hit=true`。如果 `review_ms` 拖尾，可以临时把 `VLM_REQUEST_TIMEOUT_SECONDS` 调到 20-30，或把 `ROI_REVIEW_CONCURRENCY` 调到 1-2 降低供应商限流风险。
 
 **Q：访问 `/api/demo` 返回 200，但前端图表是空白？**
 A：浏览器开发者工具看 Network 里 `/outputs/demo_sample/...` 是不是 404。是的话说明 demo 缓存没打进镜像——重新 `docker compose build --no-cache` 试试。

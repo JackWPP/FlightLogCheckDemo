@@ -16,6 +16,8 @@ from .schemas import OcrBlock
 
 
 def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True) -> dict[str, Any]:
+    started = time.time()
+    timings: dict[str, int] = {}
     load_dotenv()
     token = token_from_env()
     out_dir = run_dir / "ppocrv6"
@@ -25,13 +27,36 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
     if ppocr_cache_enabled():
         cached = load_ppocr_cache(cache_dir, out_dir)
         if cached:
+            cached["timings"] = {
+                "ppocr_submit_ms": 0,
+                "ppocr_poll_ms": 0,
+                "ppocr_download_ms": 0,
+                "ppocr_extract_ms": 0,
+                "ppocr_total_ms": int((time.time() - started) * 1000),
+            }
             return cached
     if not token:
-        return {"ok": False, "error": "Missing PADDLEOCR_AISTUDIO_TOKEN in .env", "blocks": [], "ocr_image_url": None}
+        return {
+            "ok": False,
+            "error": "Missing PADDLEOCR_AISTUDIO_TOKEN in .env",
+            "blocks": [],
+            "ocr_image_url": None,
+            "timings": {
+                "ppocr_submit_ms": 0,
+                "ppocr_poll_ms": 0,
+                "ppocr_download_ms": 0,
+                "ppocr_extract_ms": 0,
+                "ppocr_total_ms": int((time.time() - started) * 1000),
+            },
+        }
 
     try:
+        t = time.time()
         job_id = submit_job(str(image_path), token, "PP-OCRv6", optional_payload)
+        timings["ppocr_submit_ms"] = int((time.time() - t) * 1000)
+        t = time.time()
         job = poll_job(token, job_id, interval=ppocr_poll_interval(), max_wait=ppocr_max_wait())
+        timings["ppocr_poll_ms"] = int((time.time() - t) * 1000)
         job_meta = {
             "ok": job.ok,
             "job_id": job.job_id,
@@ -44,17 +69,25 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
         }
         (out_dir / "job.json").write_text(json.dumps(job_meta, ensure_ascii=False, indent=2), encoding="utf-8")
         if not job.ok or not job.json_url:
-            return {"ok": False, "error": job.error or job.state or "ppocr_job_failed", "blocks": [], "ocr_image_url": None}
+            timings["ppocr_download_ms"] = 0
+            timings["ppocr_extract_ms"] = 0
+            timings["ppocr_total_ms"] = int((time.time() - started) * 1000)
+            return {"ok": False, "error": job.error or job.state or "ppocr_job_failed", "blocks": [], "ocr_image_url": None, "timings": timings}
 
+        t = time.time()
         records = download_jsonl(job.json_url)
         (out_dir / "result.jsonl").write_text(
             "\n".join(json.dumps(record, ensure_ascii=False) for record in records),
             encoding="utf-8",
         )
         image_paths = download_ppocr_images(records, out_dir)
+        timings["ppocr_download_ms"] = int((time.time() - t) * 1000)
+        t = time.time()
         blocks = extract_ppocr_blocks(records)
         blocks_json = [block_to_dict(block) for block in blocks]
         (out_dir / "ocr_blocks.json").write_text(json.dumps(blocks_json, ensure_ascii=False, indent=2), encoding="utf-8")
+        timings["ppocr_extract_ms"] = int((time.time() - t) * 1000)
+        timings["ppocr_total_ms"] = int((time.time() - started) * 1000)
         if ppocr_cache_enabled():
             save_ppocr_cache(cache_dir, blocks_json, image_paths[0] if image_paths else None, job_meta)
         return {
@@ -66,10 +99,16 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
             "ocr_image_url": None,
             "job_id": job_id,
             "cache_hit": False,
+            "timings": timings,
         }
     except Exception as exc:
         (out_dir / "error.json").write_text(json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2), encoding="utf-8")
-        return {"ok": False, "error": str(exc), "blocks": [], "ocr_image_url": None}
+        timings.setdefault("ppocr_submit_ms", 0)
+        timings.setdefault("ppocr_poll_ms", 0)
+        timings.setdefault("ppocr_download_ms", 0)
+        timings.setdefault("ppocr_extract_ms", 0)
+        timings["ppocr_total_ms"] = int((time.time() - started) * 1000)
+        return {"ok": False, "error": str(exc), "blocks": [], "ocr_image_url": None, "timings": timings}
 
 
 def ppocr_cache_enabled() -> bool:
