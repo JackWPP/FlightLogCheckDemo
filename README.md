@@ -8,7 +8,7 @@
 - OCR 主链路：原始上传图直接交给 PaddleOCR AI Studio `PP-OCRv6`，使用其内置文档矫正能力。
 - 字段结构化：PP-OCRv6 输出文字块后，本地按 `fields.yaml` 做字段归属，再用 DeepSeek cleaner 清洗为字段值。
 - 规则判断：所有 pass/fail 均由本地 validators 完成，不让 LLM 直接决定合规。
-- ROI 兜底：对“已识别但规则未通过”的关键字段裁切扩展 ROI，再用视觉模型复核；只有复核值通过本地规则才替换。
+- ROI 兜底：默认从 PaddleOCR 输出的 OCR 图与字段候选 blocks 裁切局部证据，再用视觉模型复核；只有复核值通过本地规则才替换。
 - 证据保留：每次运行保存 `report.json`、`field_candidates.json`、`ocr_blocks.json`、OCR 检测图、ROI 图。
 
 ## 快速启动
@@ -46,6 +46,7 @@ copy .env.example .env
 - `SILICONFLOW_API_KEY`：DeepSeek cleaner，默认模型 `deepseek-ai/DeepSeek-V4-Flash`。
 - `ALIYUN_API_KEY`：ROI 级视觉复核，默认模型 `qwen3.7-plus`。
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型。
+- `REGISTRATION_MODE`：默认 `off`。可选 `optional` / `required`，只在需要旧版 SIFT 配准 ROI 时开启。
 
 说明：默认缓存示例不需要 key；只有上传新图并实时分析时才需要云端 key。
 
@@ -70,11 +71,11 @@ fields.yaml             字段、ROI、规则和候选归属配置
   -> OCR blocks 字段归属
   -> DeepSeek cleaner 清洗字段值
   -> 本地 validators 规则校验
-  -> 失败/需复核关键字段 ROI-VLM double check
+  -> 从 PaddleOCR OCR 图/blocks 裁切失败关键字段 ROI，交给 ROI-VLM double check
   -> Web 展示问题列表与证据
 ```
 
-配准链路仍保留，用于 ROI 证据和兜底裁切；PP-OCRv6 不再使用我们自己的 warped 图，避免二次图像变形。
+默认线上链路不跑本地 SIFT 配准，主路径依赖 PaddleOCR 的文档矫正与整页 OCR。旧版配准链路仍保留为可选辅助：设置 `REGISTRATION_MODE=optional` 时，如果配准成功会额外生成 `warped.png` 和旧式 ROI；设置 `required` 时配准失败会中断。
 
 ## 当前示例结果
 

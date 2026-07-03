@@ -11,7 +11,7 @@ import numpy as np
 
 from .config import CANONICAL_DIR, FIELDS_PATH, OUT_DIR
 from .crop import crop_roi, save_rois
-from .field_assignment import assign_blocks_to_fields, candidates_to_json
+from .field_assignment import assign_blocks_to_fields, candidates_to_json, scale_bbox
 from .fields import load_fields
 from .image_io import imread, imwrite
 from .llm_cleaner import DEFAULT_CLEANER_MODEL, clean_field_values
@@ -19,7 +19,7 @@ from .model_adapters import recognize_with_provider
 from .ppocr_pipeline import block_to_dict, run_ppocrv6
 from .recognizers import mock_recognize
 from .registration import load_template, register, save_registration_summary
-from .schemas import FieldCheck
+from .schemas import FieldCheck, FieldSpec, RecognitionResult
 from .validators import validate
 
 
@@ -27,6 +27,7 @@ from .validators import validate
 # Stages: registration, ocr, validate, review
 # Status: running, done, failed, skipped
 ProgressCB = Callable[[str, str], None] | None
+REGISTRATION_MODES = {"off", "optional", "required"}
 
 
 def analyze_image(
@@ -49,32 +50,9 @@ def analyze_image(
 
     run_dir = OUT_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-
-    # --- Stage 1: registration (SIFT/ORB feature match) --------------------
-    t = time.time()
-    emit("registration", "running")
-    image = imread(image_path)
-    template = load_template(CANONICAL_DIR)
-    reg = register(image, template)
-    save_registration_summary(run_dir / "registration.json", reg)
-    if not reg.ok or reg.warped is None:
-        emit("registration", "failed",
-             duration_ms=int((time.time() - t) * 1000),
-             reason=reg.reject_reason)
-        return {"ok": False, "error": reg.reject_reason, "registration": _reg_dict(reg)}
-    emit("registration", "done",
-         duration_ms=int((time.time() - t) * 1000),
-         inliers=reg.inliers)
-
-    # --- Stage 2: warp + ROI crop (fast, no event) ------------------------
-    warped = apply_template_alignment(reg.warped)
-    warped_path = run_dir / "warped.png"
-    imwrite(warped_path, warped)
     canonical, fields = load_fields(FIELDS_PATH)
-    roi_dir = run_dir / "rois"
-    roi_paths = save_rois(warped, fields, roi_dir)
 
-    # --- Stage 3: OCR (PP-OCRv6 page recognition) --------------------------
+    # --- Stage 1: OCR (PP-OCRv6 page recognition) --------------------------
     t = time.time()
     emit("ocr", "running")
     ocr_meta = run_hybrid_ocr(
@@ -85,43 +63,92 @@ def analyze_image(
     emit("ocr", ocr_status,
          duration_ms=int((time.time() - t) * 1000),
          blocks=blocks_count)
+    ppocr_roi_paths = build_ppocr_roi_evidence(ocr_meta, fields, canonical, run_dir)
 
-    # --- Stage 4: per-field validation (local rules) ----------------------
+    # --- Stage 2: optional registration for ROI evidence/fallback ----------
+    reg = None
+    warped = None
+    warped_url = None
+    roi_paths: dict[str, Path] = {}
+    reg_mode = registration_mode()
+    if reg_mode == "off":
+        emit("registration", "skipped", reason="REGISTRATION_MODE=off")
+    else:
+        t = time.time()
+        emit("registration", "running", mode=reg_mode)
+        image = imread(image_path)
+        template = load_template(CANONICAL_DIR)
+        reg = register(image, template)
+        save_registration_summary(run_dir / "registration.json", reg)
+        if not reg.ok or reg.warped is None:
+            emit("registration", "failed",
+                 duration_ms=int((time.time() - t) * 1000),
+                 reason=reg.reject_reason)
+            if reg_mode == "required":
+                return {"ok": False, "error": reg.reject_reason, "registration": _reg_dict(reg, reg_mode)}
+        else:
+            emit("registration", "done",
+                 duration_ms=int((time.time() - t) * 1000),
+                 inliers=reg.inliers)
+            warped = apply_template_alignment(reg.warped)
+            warped_path = run_dir / "warped.png"
+            imwrite(warped_path, warped)
+            warped_url = f"/runs/{run_id}/warped.png"
+            roi_dir = run_dir / "rois"
+            roi_paths = save_rois(warped, fields, roi_dir)
+
+    # --- Stage 3: per-field validation (local rules) ----------------------
     t = time.time()
     emit("validate", "running")
     checks: list[FieldCheck] = []
     for field in fields:
-        roi = crop_roi(warped, field.bbox)
+        roi = crop_roi(warped, field.bbox) if warped is not None else None
+        roi_path = ppocr_roi_paths.get(field.id) or roi_paths.get(field.id)
+        roi_url = evidence_url(run_id, roi_path) if roi_path else None
         if field.recognizer == "checkbox" or provider == "mock":
             if field.recognizer == "checkbox":
-                recognition = mock_recognize(field, roi)
+                if roi is not None:
+                    recognition = mock_recognize(field, roi)
+                elif roi_path:
+                    recognition = mock_recognize(field, imread(roi_path))
+                else:
+                    recognition = unresolved_result(field, "未生成可用ROI，勾选框需人工复核")
             else:
-                recognition = ocr_meta["cleaned_results"].get(field.id) or mock_recognize(field, roi)
+                recognition = ocr_meta["cleaned_results"].get(field.id)
+                if recognition is None:
+                    recognition = mock_recognize(field, roi) if roi is not None else unresolved_result(
+                        field, "无OCR候选"
+                    )
         else:
             recognition = ocr_meta["cleaned_results"].get(field.id)
             if not recognition or not (recognition.value or recognition.normalized_value):
-                recognition = recognize_with_provider(field, roi_paths[field.id], provider, model)
+                if roi_path:
+                    recognition = recognize_with_provider(field, roi_path, provider, model)
+                else:
+                    recognition = unresolved_result(field, "无可靠OCR候选，且未生成可用ROI")
         passed, msg = validate(field, recognition)
         checks.append(FieldCheck(
             field, recognition, passed, msg,
-            roi_url=f"/runs/{run_id}/rois/{field.id}.png",
+            roi_url=roi_url,
         ))
     emit("validate", "done",
          duration_ms=int((time.time() - t) * 1000),
          count=len(checks))
 
-    # --- Stage 5: ROI-VLM review (only for fields that need it) ------------
+    # --- Stage 4: ROI-VLM review (prefer PaddleOCR ROI evidence) -----------
     needs_review = [
         c for c in checks
-        if should_roi_review(c.field, c.recognition, c.passed, mode)
+        if should_roi_review(c.field, c.recognition, c.passed, mode) and (ppocr_roi_paths.get(c.field.id) or warped is not None)
     ]
     if needs_review:
         t = time.time()
         emit("review", "running", total=len(needs_review))
         for c in needs_review:
             i = checks.index(c)
+            evidence_path = ppocr_roi_paths.get(c.field.id)
             new_rec, new_passed, new_msg = roi_review_field(
-                c.field, c.recognition, c.passed, c.message, warped, run_dir,
+                c.field, c.recognition, c.passed, c.message, run_dir,
+                evidence_path=evidence_path, warped=warped,
             )
             checks[i] = FieldCheck(
                 c.field, new_rec, new_passed, new_msg, c.roi_url,
@@ -130,7 +157,8 @@ def analyze_image(
              duration_ms=int((time.time() - t) * 1000),
              total=len(needs_review))
     else:
-        emit("review", "skipped", total=0)
+        reason = "no_roi_evidence" if warped is None and not ppocr_roi_paths else "no_fields"
+        emit("review", "skipped", total=0, reason=reason)
 
     # --- Build report ------------------------------------------------------
     field_dicts = [_check_dict(check) for check in checks]
@@ -139,8 +167,8 @@ def analyze_image(
         "ok": not problems,
         "problems": problems or ["通过"],
         "summary": build_summary(field_dicts, ocr_meta["public"]),
-        "registration": _reg_dict(reg),
-        "warped_url": f"/runs/{run_id}/warped.png",
+        "registration": _reg_dict(reg, reg_mode),
+        "warped_url": warped_url,
         "mode": mode,
         "ocr": ocr_meta["public"],
         "fields": field_dicts,
@@ -149,6 +177,32 @@ def analyze_image(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     return report
+
+
+def registration_mode() -> str:
+    value = os.getenv("REGISTRATION_MODE", "off").strip().lower()
+    return value if value in REGISTRATION_MODES else "off"
+
+
+def unresolved_result(field: FieldSpec, reason: str) -> RecognitionResult:
+    return RecognitionResult(
+        value="",
+        normalized_value="",
+        confidence=0.0,
+        provider="unresolved",
+        model="none",
+        raw={"reason": reason, "field_id": field.id},
+        needs_review=True,
+        review_reason=reason,
+    )
+
+
+def evidence_url(run_id: str, path: Path) -> str:
+    if path.parts[-2] == "ppocr_rois":
+        return f"/runs/{run_id}/ppocr_rois/{path.name}"
+    if path.parts[-2] == "rois":
+        return f"/runs/{run_id}/rois/{path.name}"
+    return f"/runs/{run_id}/{path.name}"
 
 
 def run_hybrid_ocr(
@@ -198,7 +252,66 @@ def run_hybrid_ocr(
         "cleaner_provider": cleaner_provider,
         "cleaner_model": cleaner_model or DEFAULT_CLEANER_MODEL,
     }
-    return {"cleaned_results": cleaned, "public": public}
+    return {
+        "cleaned_results": cleaned,
+        "public": public,
+        "ocr_image_path": ocr_image_path,
+        "assignments": assignments,
+    }
+
+
+def build_ppocr_roi_evidence(ocr_meta: dict, fields: list[FieldSpec], canonical: dict[str, int], run_dir: Path) -> dict[str, Path]:
+    ocr_image_path = ocr_meta.get("ocr_image_path")
+    if not ocr_image_path:
+        return {}
+    image = imread(ocr_image_path)
+    out_dir = run_dir / "ppocr_rois"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    assignments = ocr_meta.get("assignments") or {}
+    paths: dict[str, Path] = {}
+    for field in fields:
+        bbox = ppocr_evidence_bbox(field, assignments.get(field.id, []), image.shape[1], image.shape[0], canonical)
+        roi = crop_roi(image, bbox, pad=10)
+        path = out_dir / f"{field.id}.png"
+        imwrite(path, roi)
+        paths[field.id] = path
+    return paths
+
+
+def ppocr_evidence_bbox(
+    field: FieldSpec,
+    candidates,
+    width: int,
+    height: int,
+    canonical: dict[str, int],
+) -> tuple[int, int, int, int]:
+    candidate_boxes = [candidate.block.box for candidate in candidates[:4]]
+    if candidate_boxes:
+        x1 = min(box[0] for box in candidate_boxes)
+        y1 = min(box[1] for box in candidate_boxes)
+        x2 = max(box[2] for box in candidate_boxes)
+        y2 = max(box[3] for box in candidate_boxes)
+        return clamp_xyxy(expand_xyxy((x1, y1, x2, y2), 0.55), width, height)
+    scale_x = width / max(float(canonical["width"]), 1.0)
+    scale_y = height / max(float(canonical["height"]), 1.0)
+    base = tuple(field.assignment.get("search_bbox") or field.bbox)
+    return clamp_xyxy(expand_xyxy(scale_bbox(base, scale_x, scale_y), 0.35), width, height)
+
+
+def expand_xyxy(bbox: tuple[float, float, float, float], ratio: float) -> tuple[float, float, float, float]:
+    x1, y1, x2, y2 = bbox
+    w = max(x2 - x1, 1.0)
+    h = max(y2 - y1, 1.0)
+    return x1 - w * ratio, y1 - h * ratio, x2 + w * ratio, y2 + h * ratio
+
+
+def clamp_xyxy(bbox: tuple[float, float, float, float], width: int, height: int) -> tuple[int, int, int, int]:
+    x1, y1, x2, y2 = bbox
+    ix1 = max(0, min(width - 1, int(round(x1))))
+    iy1 = max(0, min(height - 1, int(round(y1))))
+    ix2 = max(ix1 + 1, min(width, int(round(x2))))
+    iy2 = max(iy1 + 1, min(height, int(round(y2))))
+    return ix1, iy1, ix2 - ix1, iy2 - iy1
 
 
 def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
@@ -220,15 +333,30 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
     return False
 
 
-def roi_review_field(field, original, original_passed: bool, original_msg: str, warped, run_dir: Path):
+def roi_review_field(
+    field,
+    original,
+    original_passed: bool,
+    original_msg: str,
+    run_dir: Path,
+    evidence_path: Path | None = None,
+    warped=None,
+):
     provider = os.getenv("ROI_REVIEW_PROVIDER", "aliyun")
     model = os.getenv("ROI_REVIEW_MODEL", "qwen3.7-plus")
     review_dir = run_dir / "roi_reviews"
     review_dir.mkdir(parents=True, exist_ok=True)
-    review_bbox = expanded_bbox(field.bbox, warped.shape[1], warped.shape[0], ratio=0.45)
-    review_roi = crop_roi(warped, review_bbox)
     review_path = review_dir / f"{field.id}.png"
-    imwrite(review_path, review_roi)
+    if evidence_path:
+        review_path.write_bytes(evidence_path.read_bytes())
+    elif warped is not None:
+        review_bbox = expanded_bbox(field.bbox, warped.shape[1], warped.shape[0], ratio=0.45)
+        review_roi = crop_roi(warped, review_bbox)
+        imwrite(review_path, review_roi)
+    else:
+        original.needs_review = True
+        original.review_reason = original.review_reason or "缺少ROI复核图"
+        return original, original_passed, original_msg
     reviewed = recognize_with_provider(field, review_path, provider, model)
     reviewed.provider = f"roi-vlm:{reviewed.provider}"
     reviewed.raw = {
@@ -299,8 +427,19 @@ def apply_template_alignment(warped):
     return cv2.warpPerspective(warped, matrix, (template.shape[1], template.shape[0]), borderValue=(255, 255, 255))
 
 
-def _reg_dict(reg) -> dict:
+def _reg_dict(reg, mode: str | None = None) -> dict:
+    if reg is None:
+        return {
+            "mode": mode or registration_mode(),
+            "ok": False,
+            "enabled": False,
+            "inliers": 0,
+            "reproj_rmse": None,
+            "reject_reason": "REGISTRATION_MODE=off",
+        }
     return {
+        "mode": mode or registration_mode(),
+        "enabled": True,
         "ok": reg.ok,
         "inliers": reg.inliers,
         "reproj_rmse": reg.reproj_rmse,
@@ -356,5 +495,7 @@ def source_label(provider: str) -> str:
     if provider in {"siliconflow", "aliyun"}:
         return "Cleaner"
     if provider == "mock":
+        return "Unresolved"
+    if provider == "unresolved":
         return "Unresolved"
     return "ROI-VLM"

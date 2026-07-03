@@ -219,15 +219,15 @@
       <div class="side">
         <div id="status" class="status"><strong>未开始</strong><span class="meta">上传一张表单照片。</span></div>
         <ol id="progress" class="progress-list hidden">
-          <li data-stage="registration" class="pending">
-            <span class="icon">⏳</span>
-            <span class="label">配准</span>
-            <span class="meta" data-label="SIFT/ORB 特征匹配">SIFT/ORB 特征匹配</span>
-          </li>
           <li data-stage="ocr" class="pending">
             <span class="icon">⏳</span>
-            <span class="label">整页 OCR</span>
-            <span class="meta" data-label="PP-OCRv6">PP-OCRv6</span>
+            <span class="label">整页 OCR / 文档矫正</span>
+            <span class="meta" data-label="PP-OCRv6 原图处理">PP-OCRv6 原图处理</span>
+          </li>
+          <li data-stage="registration" class="pending">
+            <span class="icon">⏳</span>
+            <span class="label">本地配准</span>
+            <span class="meta" data-label="默认关闭，仅辅助 ROI">默认关闭，仅辅助 ROI</span>
           </li>
           <li data-stage="validate" class="pending">
             <span class="icon">⏳</span>
@@ -237,7 +237,7 @@
           <li data-stage="review" class="pending">
             <span class="icon">⏳</span>
             <span class="label">ROI 复核</span>
-            <span class="meta" data-label="阿里百炼 qwen">阿里百炼 qwen</span>
+            <span class="meta" data-label="优先使用 PaddleOCR ROI">优先使用 PaddleOCR ROI</span>
           </li>
         </ol>
         <ol id="problems" class="problem-list"></ol>
@@ -296,7 +296,7 @@
         const cleanerShort = String(cfg.cleaner_model || '').replace(/^deepseek-ai\//, '');
         const missing = Object.entries(cfg.keys_configured || {})
           .filter(([, ok]) => !ok).map(([k]) => k);
-        el.textContent = `OCR: PP-OCRv6 · Cleaner: ${cleanerShort} · ROI 复核: ${cfg.roi_provider}/${cfg.roi_model}`
+        el.textContent = `OCR: PP-OCRv6 · Cleaner: ${cleanerShort} · ROI 复核: ${cfg.roi_provider}/${cfg.roi_model} · 配准: ${cfg.registration_mode}`
           + (missing.length ? ` · ⚠ 缺 key: ${missing.join(', ')}` : '');
       } catch (e) {
         el.textContent = '配置加载失败';
@@ -410,7 +410,12 @@
       } else if (status === 'skipped') {
         li.className = 'skipped';
         icon.textContent = '⏭️';
-        meta.textContent = '无失败字段，跳过';
+        const reason = extra && extra.reason;
+        meta.textContent = reason === 'REGISTRATION_MODE=off'
+          ? '已关闭，使用 PaddleOCR ROI'
+          : reason === 'no_fields'
+            ? '无字段需要复核'
+            : '跳过';
       }
     }
 
@@ -421,6 +426,7 @@
     document.getElementById('showWarped').onclick = () => {
       const url = lastManifest?.images?.warped || lastReport?.warped_url;
       if (url) mainImage.src = url;
+      else if (lastReport?.ocr?.ocr_image_url) mainImage.src = lastReport.ocr.ocr_image_url;
     };
     document.getElementById('showOcr').onclick = () => {
       const url = lastManifest?.images?.ocr || lastReport?.ocr?.ocr_image_url;
@@ -505,7 +511,7 @@
     function selectField(id) {
       const field = lastReport.fields.find(item => item.id === id);
       if (!field) return;
-      roiImage.src = field.roi_url;
+      roiImage.src = field.roi_url || lastReport.ocr?.ocr_image_url || lastReport.upload_url || '';
       const candidates = lastReport.ocr?.candidates?.[field.id] || [];
       roiMeta.textContent = `${field.label} | ${field.source_label || sourceLabel(field.provider)} | ${field.provider}/${field.model} | ${field.message || '通过'}${field.needs_review ? ' | 需复核' : ''} | candidates=${candidates.length}`;
       document.getElementById('fieldRaw').textContent = JSON.stringify({
@@ -534,6 +540,7 @@
 
     function sourceLabel(provider) {
       if (provider === 'vision-rule') return 'Checkbox';
+      if (provider === 'unresolved') return 'Unresolved';
       if (String(provider).includes('fallback_cleaner')) return 'PP-OCR';
       if (provider === 'siliconflow' || provider === 'aliyun') return 'Cleaner';
       if (provider === 'mock') return 'Unresolved';

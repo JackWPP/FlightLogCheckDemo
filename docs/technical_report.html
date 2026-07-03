@@ -149,9 +149,9 @@
         <div class="step"><b>字段归属</b><small>根据 fields.yaml 将 OCR block 分配到字段。</small></div>
         <div class="step"><b>LLM Cleaner</b><small>DeepSeek 清洗字段值，不做最终判定。</small></div>
         <div class="step"><b>规则引擎</b><small>本地 validators 做 pass/fail。</small></div>
-        <div class="step"><b>ROI 复核</b><small>失败关键字段裁切扩展 ROI 再读一次。</small></div>
+        <div class="step"><b>ROI 复核</b><small>从 PaddleOCR 图和 block 候选裁局部 ROI 再读一次。</small></div>
       </div>
-      <p>重要调整：PP-OCRv6 不再吃我们自己的 warped 图，而是直接读取原始上传图。图像矫正交给 PaddleOCR 的文档预处理，避免二次变形造成文字块错位。</p>
+      <p>重要调整：PP-OCRv6 不再吃我们自己的 warped 图，而是直接读取原始上传图。图像矫正交给 PaddleOCR 的文档预处理，避免二次变形造成文字块错位。默认线上模式不跑本地 SIFT 配准，ROI 证据优先来自 PaddleOCR 输出图与 OCR block 坐标。</p>
     </section>
 
     <section>
@@ -160,7 +160,7 @@
         <tr><th>模块</th><th>当前模型/方法</th><th>职责边界</th></tr>
         <tr><td>整页 OCR</td><td><code>PP-OCRv6</code></td><td>文档矫正、文字检测、文字识别、输出 box 和 score。</td></tr>
         <tr><td>字段清洗</td><td><code>deepseek-ai/DeepSeek-V4-Flash</code></td><td>从候选文字中选择字段值、归一化日期/编号/英文内容。</td></tr>
-        <tr><td>ROI 复核</td><td><code>qwen3.7-plus</code></td><td>只对关键失败字段的小图做二次识别，成功后替换原值。</td></tr>
+        <tr><td>ROI 复核</td><td><code>qwen3.7-plus</code></td><td>只对关键失败字段的 PaddleOCR 局部小图做二次识别，成功后替换原值。</td></tr>
         <tr><td>最终判定</td><td>本地规则</td><td>范围、正则、日期、checkbox、英文判断等，LLM 不直接决定合规。</td></tr>
       </table>
     </section>
@@ -180,7 +180,7 @@
       <div class="grid cols-2" style="margin-top:14px">
         <figure>
           <img src="../outputs/demo_sample/warped.png" alt="配准图">
-          <figcaption>配准图。主要用于 ROI 证据和字段级兜底裁切。</figcaption>
+          <figcaption>配准图。历史演示证据；线上默认关闭本地 SIFT，仅在可选辅助模式下生成。</figcaption>
         </figure>
         <figure>
           <img src="../outputs/demo_sample/rois/apu_cum_cycles.png" alt="APU 累计使用循环 ROI">
@@ -191,7 +191,7 @@
 
     <section>
       <h2>5. ROI 复核案例：APU 累计使用循环</h2>
-      <p>在默认示例中，整页 OCR 和 cleaner 一开始将 APU 累计使用循环读为 <code>348</code>，未满足“4 或 5 位数字”的规则。系统随后裁切扩展 ROI，调用视觉模型复核，得到 <code>3481</code>，并重新通过本地 validator。</p>
+      <p>在默认示例中，整页 OCR 和 cleaner 一开始将 APU 累计使用循环读为 <code>348</code>，未满足“4 或 5 位数字”的规则。系统随后基于 PaddleOCR 图和候选 block 裁切扩展 ROI，调用视觉模型复核，得到 <code>3481</code>，并重新通过本地 validator。</p>
       <table>
         <tr><th>阶段</th><th>值</th><th>结果</th><th>说明</th></tr>
         <tr><td>PP-OCR + Cleaner</td><td><code>348</code></td><td class="bad">失败</td><td>只有 3 位，不满足 APU 循环规则。</td></tr>
@@ -220,7 +220,7 @@ assignment:
       <ol>
         <li>运行 <code>.\scripts\run_demo.ps1</code> 或 <code>uv run uvicorn formcheck.app:app --host 127.0.0.1 --port 8003</code>。</li>
         <li>打开 <code>http://127.0.0.1:8003/</code>，默认展示缓存示例。</li>
-        <li>点击左侧按钮切换原图、配准图、OCR 图、扫描底图和 AI 底图。</li>
+        <li>点击左侧按钮切换原图、OCR 图、可选配准图、扫描底图和 AI 底图。</li>
         <li>点击中间字段行或右侧问题列表，查看 ROI 图、候选、cleaner 和复核证据。</li>
         <li>切换“上传新图”后上传照片，系统会实时调用云端 OCR/VLM。</li>
       </ol>

@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import ASSETS_DIR, OUT_DIR, OUTPUTS_DIR, ROOT
 from .demo import demo_payload, ensure_demo_sample
 from .llm_cleaner import DEFAULT_CLEANER_MODEL
-from .pipeline import analyze_image
+from .pipeline import analyze_image, registration_mode
 
 
 app = FastAPI(title="Flight Log Check Demo")
@@ -63,6 +63,7 @@ def _public_config() -> dict:
         "cleaner_model": os.getenv("CLEANER_MODEL") or DEFAULT_CLEANER_MODEL,
         "roi_provider": os.getenv("ROI_REVIEW_PROVIDER", "aliyun"),
         "roi_model": os.getenv("ROI_REVIEW_MODEL", "qwen3.7-plus"),
+        "registration_mode": registration_mode(),
         "keys_configured": keys,
         "ready_for_live_upload": all(keys.values()),
     }
