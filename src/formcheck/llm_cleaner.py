@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import hashlib
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -92,9 +93,14 @@ def clean_field_values_with_meta(
                 "reason": item.get("reason"),
                 "evidence_block_ids": item.get("evidence_block_ids", []),
             }
+            value = str(item.get("value", ""))
+            normalized_value = str(item.get("normalized_value") or item.get("value", ""))
+            if field.validator == "english_text":
+                value = sanitize_english_text(value)
+                normalized_value = sanitize_english_text(normalized_value)
             results[field.id] = RecognitionResult(
-                value=str(item.get("value", "")),
-                normalized_value=str(item.get("normalized_value") or item.get("value", "")),
+                value=value,
+                normalized_value=normalized_value,
                 confidence=float(item.get("confidence") or 0.0),
                 provider=cfg.name,
                 model=selected_model,
@@ -113,11 +119,16 @@ def clean_field_values_with_meta(
     except Exception as exc:
         for result in fallback.values():
             result.raw = {**(result.raw or {}), "cleaner_error": str(exc)}
+            result.needs_review = result.needs_review or result.confidence < 0.8
+            if not result.review_reason:
+                result.review_reason = "Cleaner超时，使用本地候选兜底"
+        save_cleaner_cache(cache_dir, fallback)
         return fallback, {
             "provider": cfg.name,
             "model": selected_model,
             "cache_hit": False,
             "fallback": True,
+            "fallback_cached": True,
             "duration_ms": int((time.time() - started) * 1000),
             "error": str(exc),
         }
@@ -267,13 +278,19 @@ def best_candidate_text(field: FieldSpec, candidates: list[FieldCandidate]) -> s
     if not candidates:
         return ""
     if field.validator == "english_text":
-        texts = [candidate.block.text for candidate in candidates[:4] if any(ch.isalpha() for ch in candidate.block.text)]
+        texts = [
+            cleaned
+            for candidate in candidates[:6]
+            if (cleaned := sanitize_english_text(candidate.block.text))
+        ]
         return " ".join(texts)
     return candidates[0].block.text
 
 
 def normalize_for_field(field: FieldSpec, value: str) -> str:
     text = (value or "").strip()
+    if field.validator == "english_text":
+        return sanitize_english_text(text)
     if field.validator in {"regex", "prefix_or_exact"}:
         return text.replace(" ", "").upper()
     if field.validator == "same_day":
@@ -284,6 +301,32 @@ def normalize_for_field(field: FieldSpec, value: str) -> str:
         import re
 
         return re.sub(r"\D", "", text)
+    return text
+
+
+def sanitize_english_text(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    parts = re.split(r"\s+", text)
+    kept: list[str] = []
+    for part in parts:
+        cleaned = strip_cjk_noise(part)
+        if not cleaned:
+            continue
+        upper = cleaned.upper()
+        if upper in {"FAULT", "FAULTMSG", "FAULTMSGE", "MESSAGE", "MSG"}:
+            continue
+        if not re.search(r"[A-Za-z]", cleaned):
+            continue
+        kept.append(cleaned)
+    return " ".join(kept)
+
+
+def strip_cjk_noise(text: str) -> str:
+    text = re.sub(r"[\u4e00-\u9fff]+", " ", text)
+    text = re.sub(r"[\u3000-\u303f\uff00-\uffef]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
     return text
 
 

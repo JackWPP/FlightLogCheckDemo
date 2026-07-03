@@ -112,9 +112,9 @@ def test_roi_review_fields_use_search_bbox_not_tight_candidate_box() -> None:
         page_size=(2400, 1784),
     )
 
-    assert 125 <= w <= 145
+    assert 140 <= w <= 155
     assert 55 <= h <= 70
-    assert 330 <= x <= 342
+    assert 338 <= x <= 346
     assert 820 <= y <= 836
 
 

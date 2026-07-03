@@ -107,6 +107,11 @@
     .task-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .task-card small { color: var(--muted); overflow-wrap: anywhere; }
     .viewer img { max-width: 100%; display: block; border: 1px solid var(--line); background: #fff; }
+    .viewer img,
+    .evidence img,
+    .layout-stage {
+      cursor: zoom-in;
+    }
     .evidence-board {
       display: grid;
       gap: 12px;
@@ -210,6 +215,10 @@
     .field-row:last-child { border-bottom: 0; }
     .field-row.fail { background: #fff4f2; }
     .field-row.pass { background: #f3fbf7; }
+    .field-row.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
     .value { color: var(--muted); overflow-wrap: anywhere; }
     .badge { justify-self: end; font-size: 12px; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--line); }
     .badge.pass { color: var(--good); border-color: #b8e2d1; background: #f3fbf7; }
@@ -240,6 +249,7 @@
     .status strong { display: block; font-size: 18px; margin-bottom: 4px; }
     .problem-list { margin: 0; padding-left: 18px; }
     .problem-list li { margin: 5px 0; color: var(--bad); cursor: pointer; }
+    .problem-list li:hover { text-decoration: underline; }
     .evidence img { width: 100%; border: 1px solid var(--line); background: #fff; }
     .evidence-main {
       max-height: 360px;
@@ -306,6 +316,48 @@
     .progress-list .icon { font-size: 14px; text-align: center; }
     .progress-list .label { font-weight: 600; }
     .progress-list .meta { font-size: 12px; }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      padding: 14px;
+      background: rgba(13, 20, 28, 0.86);
+    }
+    .lightbox.hidden { display: none; }
+    .lightbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #fff;
+    }
+    .lightbox-bar strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    .lightbox button {
+      background: #fff;
+      border-color: #fff;
+    }
+    .lightbox-stage {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      place-items: center;
+    }
+    .lightbox-stage img {
+      max-width: none;
+      max-height: none;
+      width: auto;
+      height: auto;
+      background: #fff;
+      border: 1px solid rgba(255,255,255,0.35);
+    }
     @media (max-width: 1100px) {
       main { grid-template-columns: 1fr; }
       section { min-height: 380px; }
@@ -342,7 +394,7 @@
       </div>
       <div id="taskBoard" class="task-board hidden"></div>
       <div class="viewer">
-        <div id="demoViewer"><img id="mainImage" alt="上传或配准后的表单"></div>
+        <div id="demoViewer"><img id="mainImage" data-zoomable="true" alt="上传或配准后的表单"></div>
         <div id="liveEvidence" class="evidence-board hidden"></div>
       </div>
     </section>
@@ -385,7 +437,7 @@
         <ol id="problems" class="problem-list"></ol>
         <div class="evidence">
           <h3>字段证据</h3>
-          <img id="roiImage" class="evidence-main" alt="字段裁切图">
+          <img id="roiImage" class="evidence-main" data-zoomable="true" alt="字段裁切图">
           <p id="roiMeta" class="meta"></p>
           <div id="candidateList" class="candidate-list"></div>
           <pre id="fieldRaw" class="meta"></pre>
@@ -393,6 +445,13 @@
       </div>
     </section>
   </main>
+  <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="放大查看图片">
+    <div class="lightbox-bar">
+      <strong id="lightboxTitle">影像证据</strong>
+      <button id="closeLightbox" type="button">关闭</button>
+    </div>
+    <div class="lightbox-stage"><img id="lightboxImage" alt="放大影像证据"></div>
+  </div>
   <script>
     let lastReport = null;
     let lastManifest = null;
@@ -412,6 +471,9 @@
     const candidateList = document.getElementById('candidateList');
     const summaryBox = document.getElementById('summary');
     const taskBoard = document.getElementById('taskBoard');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    const lightboxTitle = document.getElementById('lightboxTitle');
 
     uploadForm.classList.add('hidden');
     document.addEventListener('DOMContentLoaded', loadDemo);
@@ -421,6 +483,19 @@
       loadDemo();
     };
     document.getElementById('uploadMode').onclick = () => setMode('upload');
+    document.getElementById('closeLightbox').onclick = closeLightbox;
+    lightbox.addEventListener('click', (event) => {
+      if (event.target === lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeLightbox();
+    });
+    document.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const image = target.closest('img[data-zoomable="true"]');
+      if (image) openLightbox(image.getAttribute('src'), image.getAttribute('alt') || '影像证据');
+    });
 
     function setMode(mode) {
       document.getElementById('demoMode').classList.toggle('active', mode === 'demo');
@@ -686,12 +761,13 @@
         row.addEventListener('click', () => selectField(row.dataset.id));
       });
       problems.innerHTML = (report.problems || []).map((p) => {
-        const field = report.fields.find(item => item.message === p);
+        const field = findProblemField(p, report.fields);
         return `<li data-id="${field?.id || ''}">${escapeHtml(p)}</li>`;
       }).join('');
       problems.querySelectorAll('li').forEach(item => {
         item.addEventListener('click', () => {
-          if (item.dataset.id) selectField(item.dataset.id);
+          const id = item.dataset.id || findProblemField(item.textContent || '', lastReport.fields)?.id || '';
+          if (id) selectField(id, { jump: true });
         });
       });
       if (report.fields.length) selectField(report.fields.find(f => !f.passed)?.id || report.fields[0].id);
@@ -713,13 +789,13 @@
         <div class="evidence-hero">
           <strong>上传原图</strong>
           <span>客户提交的原始照片，作为整页 OCR 输入。</span>
-          ${uploadUrl ? `<img src="${escapeAttr(uploadUrl)}" alt="上传原图">` : '<span>暂无原图</span>'}
+          ${uploadUrl ? `<img data-zoomable="true" src="${escapeAttr(uploadUrl)}" alt="上传原图">` : '<span>暂无原图</span>'}
         </div>
         <div class="evidence-strip">
           <div class="evidence-tile">
             <strong>PP-OCRv6 矫正 / 检测图</strong>
             <span>由 PaddleOCR 输出的处理结果图，用于观察文字检测质量。</span>
-            ${ocrUrl ? `<img src="${escapeAttr(ocrUrl)}" alt="PP-OCRv6 输出图">` : '<span>暂无 OCR 图</span>'}
+            ${ocrUrl ? `<img data-zoomable="true" src="${escapeAttr(ocrUrl)}" alt="PP-OCRv6 输出图">` : '<span>暂无 OCR 图</span>'}
           </div>
           <div class="evidence-tile">
             <strong>识别 Layout</strong>
@@ -740,7 +816,7 @@
         <div class="evidence-hero">
           <strong>上传原图</strong>
           <span>正在送入 PP-OCRv6 做文档矫正与整页 OCR。</span>
-          ${preview ? `<img src="${escapeAttr(preview)}" alt="待处理原图">` : '<span>等待图片</span>'}
+          ${preview ? `<img data-zoomable="true" src="${escapeAttr(preview)}" alt="待处理原图">` : '<span>等待图片</span>'}
         </div>
         <div class="evidence-strip">
           <div class="evidence-tile">
@@ -767,13 +843,13 @@
         <div class="evidence-hero">
           <strong>上传原图</strong>
           <span>客户提交的原始照片，已经送入 PP-OCRv6。</span>
-          ${uploadUrl ? `<img src="${escapeAttr(uploadUrl)}" alt="上传原图">` : '<span>暂无原图</span>'}
+          ${uploadUrl ? `<img data-zoomable="true" src="${escapeAttr(uploadUrl)}" alt="上传原图">` : '<span>暂无原图</span>'}
         </div>
         <div class="evidence-strip">
           <div class="evidence-tile">
             <strong>PP-OCRv6 矫正 / 检测图</strong>
             <span>OCR 已返回，后续正在做字段归属、清洗和本地规则。</span>
-            ${ocrUrl ? `<img src="${escapeAttr(ocrUrl)}" alt="PP-OCRv6 输出图">` : '<span>OCR 未返回检测图</span>'}
+            ${ocrUrl ? `<img data-zoomable="true" src="${escapeAttr(ocrUrl)}" alt="PP-OCRv6 输出图">` : '<span>OCR 未返回检测图</span>'}
           </div>
           <div class="evidence-tile">
             <strong>识别 Layout</strong>
@@ -833,7 +909,7 @@
       }).join('');
       return `
         <div class="layout-stage">
-          <img src="${escapeAttr(imageUrl)}" alt="layout 底图">
+          <img data-zoomable="true" src="${escapeAttr(imageUrl)}" alt="layout 底图">
           <svg viewBox="0 0 ${bounds.width} ${bounds.height}" preserveAspectRatio="none" aria-hidden="true">${rects}</svg>
         </div>
       `;
@@ -875,12 +951,20 @@
       `;
     }
 
-    function selectField(id) {
+    function selectField(id, options = {}) {
       const field = lastReport.fields.find(item => item.id === id);
       if (!field) return;
+      fieldTable.querySelectorAll('.field-row').forEach(row => {
+        row.classList.toggle('selected', row.dataset.id === id);
+      });
+      if (options.jump) {
+        const row = fieldTable.querySelector(`.field-row[data-id="${cssEscape(id)}"]`);
+        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       const review = field.raw?.roi_review || null;
       const evidenceUrl = review?.roi_url || field.roi_url || lastReport.ocr?.ocr_image_url || lastReport.upload_url || '';
       roiImage.src = evidenceUrl;
+      if (evidenceUrl) roiImage.dataset.zoomable = 'true';
       const candidates = lastReport.ocr?.candidates?.[field.id] || [];
       const evidenceKind = review?.roi_url ? 'qwen复核ROI' : field.roi_url ? '字段ROI' : '整页图';
       roiMeta.textContent = `${field.label} | ${evidenceKind} | ${field.source_label || sourceLabel(field.provider)} | ${field.provider}/${field.model} | ${field.message || '通过'}${field.needs_review ? ' | 需复核' : ''} | candidates=${candidates.length}`;
@@ -902,6 +986,52 @@
         raw: field.raw,
         candidates: candidates.slice(0, 5)
       }, null, 2);
+    }
+
+    function findProblemField(problem, fields) {
+      const text = normalizeProblemText(problem);
+      if (!text) return null;
+      return fields.find(field => normalizeProblemText(field.message) === text)
+        || fields.find(field => {
+          const msg = normalizeProblemText(field.message);
+          return msg && (text.includes(msg) || msg.includes(text));
+        })
+        || fields.find(field => {
+          const label = normalizeProblemText(field.label);
+          return label && (text.includes(label) || label.includes(text));
+        })
+        || fields.find(field => !field.passed && hasSharedProblemToken(text, field))
+        || null;
+    }
+
+    function hasSharedProblemToken(text, field) {
+      const haystack = normalizeProblemText(`${field.label} ${field.message}`);
+      const tokens = ['授权号', '日期', '执照号', 'APU', '循环', '时间', '签名', '地点', '报告人', '航班号', '英文', '参考手册', '保留项目'];
+      return tokens.some(token => {
+        const normalized = normalizeProblemText(token);
+        return text.includes(normalized) && haystack.includes(normalized);
+      });
+    }
+
+    function normalizeProblemText(value) {
+      return String(value || '').replace(/\s+/g, '').replace(/[，。；:：、（）()]/g, '').toLowerCase();
+    }
+
+    function cssEscape(value) {
+      if (window.CSS && CSS.escape) return CSS.escape(value);
+      return String(value).replace(/["\\]/g, '\\$&');
+    }
+
+    function openLightbox(src, title) {
+      if (!src) return;
+      lightboxImage.src = src;
+      lightboxTitle.textContent = title || '影像证据';
+      lightbox.classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.add('hidden');
+      lightboxImage.removeAttribute('src');
     }
 
     function sectionName(section) {

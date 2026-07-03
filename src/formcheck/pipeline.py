@@ -345,7 +345,7 @@ def ppocr_evidence_bbox(
     page_width, page_height = page_size or (float(width), float(height))
     base_bbox = scaled_field_bbox(field, page_width, page_height, canonical)
     if field.assignment.get("roi_review_always") or field.assignment.get("roi_review") or field.assignment.get("prefer_roi_vlm"):
-        return ocr_bbox_to_image_bbox(expand_xyxy(base_bbox, roi_review_expand_ratio(field)), width, height, page_width, page_height)
+        return ocr_bbox_to_image_bbox(expand_review_bbox(base_bbox, field), width, height, page_width, page_height)
     candidate_boxes = [candidate.block.box for candidate in candidates[:4]]
     if candidate_boxes:
         x1 = min(box[0] for box in candidate_boxes)
@@ -377,6 +377,15 @@ def roi_review_expand_ratio(field: FieldSpec) -> float:
     if field.assignment.get("value_type") == "numeric" or field.validator in {"digit_length", "int_range"}:
         return 0.08
     return 0.25
+
+
+def expand_review_bbox(
+    bbox: tuple[float, float, float, float],
+    field: FieldSpec,
+) -> tuple[float, float, float, float]:
+    if field.assignment.get("value_type") == "numeric" or field.validator in {"digit_length", "int_range"}:
+        return expand_xyxy_asymmetric(bbox, left=0.03, top=0.08, right=0.24, bottom=0.08)
+    return expand_xyxy(bbox, roi_review_expand_ratio(field))
 
 
 def ocr_bbox_to_image_bbox(
@@ -418,6 +427,19 @@ def expand_xyxy(bbox: tuple[float, float, float, float], ratio: float) -> tuple[
     w = max(x2 - x1, 1.0)
     h = max(y2 - y1, 1.0)
     return x1 - w * ratio, y1 - h * ratio, x2 + w * ratio, y2 + h * ratio
+
+
+def expand_xyxy_asymmetric(
+    bbox: tuple[float, float, float, float],
+    left: float,
+    top: float,
+    right: float,
+    bottom: float,
+) -> tuple[float, float, float, float]:
+    x1, y1, x2, y2 = bbox
+    w = max(x2 - x1, 1.0)
+    h = max(y2 - y1, 1.0)
+    return x1 - w * left, y1 - h * top, x2 + w * right, y2 + h * bottom
 
 
 def clamp_xyxy(bbox: tuple[float, float, float, float], width: int, height: int) -> tuple[int, int, int, int]:
@@ -630,6 +652,9 @@ def _reg_dict(reg, mode: str | None = None) -> dict:
 
 def _check_dict(check: FieldCheck) -> dict:
     rec = check.recognition
+    label = source_label(rec.provider)
+    if isinstance(rec.raw, dict) and rec.raw.get("roi_review") and not rec.provider.startswith("roi-vlm:"):
+        label = "PP-OCR+ROI复核"
     return {
         "id": check.field.id,
         "label": check.field.label,
@@ -642,7 +667,7 @@ def _check_dict(check: FieldCheck) -> dict:
         "confidence": rec.confidence,
         "provider": rec.provider,
         "model": rec.model,
-        "source_label": source_label(rec.provider),
+        "source_label": label,
         "raw": rec.raw,
         "needs_review": rec.needs_review,
         "review_reason": rec.review_reason,
