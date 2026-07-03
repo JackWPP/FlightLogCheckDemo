@@ -3,7 +3,7 @@ from __future__ import annotations
 from formcheck.field_assignment import assign_blocks_to_fields
 import requests
 
-from formcheck.llm_cleaner import clean_field_values_with_meta, fallback_clean, sanitize_english_text
+from formcheck.llm_cleaner import clean_field_values_with_meta, cleaner_sections, fallback_clean, sanitize_english_text
 from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock
 
 
@@ -92,3 +92,66 @@ def test_cleaner_timeout_fallback_is_cached(tmp_path, monkeypatch) -> None:
     assert first_meta["fallback_cached"] is True
     assert second[field.id].normalized_value == "TSM21-28-00-810-802A"
     assert second_meta["cache_hit"] is True
+
+
+def test_cleaner_sections_skip_checkbox_and_empty_candidates() -> None:
+    text_field = FieldSpec("fault_ref", "参考手册", "fault_action", (0, 0, 1, 1), "keyed_text", "prefix_or_exact", {}, "fail")
+    empty_field = FieldSpec("apu_cum_cycles", "APU循环", "apu", (0, 0, 1, 1), "numeric_text", "digit_length", {}, "fail")
+    checkbox = FieldSpec("crew_checkbox", "机组", "fault_action", (0, 0, 1, 1), "checkbox", "checked", {}, "fail")
+    block = OcrBlock("b0001", "TSM21", 0.9, (0, 0, 10, 10), (5, 5))
+    assignments = {text_field.id: [FieldCandidate(text_field.id, block, 1.0, "test")]}
+
+    sections = cleaner_sections([text_field, empty_field, checkbox], assignments)
+
+    assert list(sections) == ["fault_action"]
+    assert sections["fault_action"] == [text_field]
+
+
+def test_section_cleaner_success_and_timeout_are_merged(tmp_path, monkeypatch) -> None:
+    fault = FieldSpec("fault_ref", "参考手册", "fault_action", (0, 0, 1, 1), "keyed_text", "prefix_or_exact", {}, "fail")
+    apu = FieldSpec("apu_cum_cycles", "APU循环", "apu", (0, 0, 1, 1), "numeric_text", "digit_length", {"allow_lengths": [4, 5]}, "fail")
+    fault_block = OcrBlock("b0001", "TSM21-28", 0.9, (0, 0, 10, 10), (5, 5))
+    apu_block = OcrBlock("b0002", "348", 0.9, (0, 0, 10, 10), (5, 5))
+    assignments = {
+        fault.id: [FieldCandidate(fault.id, fault_block, 1.0, "test")],
+        apu.id: [FieldCandidate(apu.id, apu_block, 1.0, "test")],
+    }
+
+    monkeypatch.setattr("formcheck.llm_cleaner.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "test-key")
+    monkeypatch.setenv("CLEANER_SECTION_CONCURRENCY", "2")
+
+    class Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"fields":{"fault_ref":{"value":"TSM21-28","normalized_value":"TSM21-28","confidence":0.93,"needs_review":false,"reason":""}}}'
+                        }
+                    }
+                ],
+                "usage": {"total_tokens": 10},
+            }
+
+    def fake_post(url, headers, json, timeout):
+        content = json["messages"][0]["content"]
+        if "当前分区: apu" in content:
+            raise requests.Timeout("apu timeout")
+        return Response()
+
+    monkeypatch.setattr("formcheck.llm_cleaner.requests.post", fake_post)
+
+    results, meta = clean_field_values_with_meta([fault, apu], assignments, provider="siliconflow", model="cleaner")
+
+    assert results[fault.id].provider == "siliconflow"
+    assert results[fault.id].normalized_value == "TSM21-28"
+    assert results[apu.id].provider == "siliconflow:fallback_cleaner"
+    assert results[apu.id].normalized_value == "348"
+    assert meta["section_results"]["fault_action"] == "ok"
+    assert meta["section_results"]["apu"] == "fallback"
+    assert meta["fallback_sections"] == ["apu"]
+    assert "apu timeout" in meta["section_errors"]["apu"]

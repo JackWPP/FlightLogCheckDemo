@@ -178,7 +178,7 @@ def analyze_image(
     field_dicts = [_check_dict(check) for check in checks]
     t = time.time()
     emit("issue_triage", "running")
-    issue_result = triage_issues(field_dicts, provider=cleaner_provider, model=cleaner_model)
+    issue_result = triage_issues(field_dicts, provider=cleaner_provider, model=cleaner_model, cleaner_meta=ocr_meta["public"])
     timings["issue_triage_ms"] = int((time.time() - t) * 1000)
     emit("issue_triage", "done",
          duration_ms=timings["issue_triage_ms"],
@@ -294,9 +294,22 @@ def run_hybrid_ocr(
             **(ppocr.get("timings") or {}),
             "assignment_ms": assignment_ms,
             "cleaner_ms": int(cleaner_meta.get("duration_ms") or 0),
+            "cleaner_total_ms": int(cleaner_meta.get("cleaner_total_ms") or cleaner_meta.get("duration_ms") or 0),
+            "cleaner_section_max_ms": int(cleaner_meta.get("cleaner_section_max_ms") or 0),
+            "cleaner_section_sum_ms": int(cleaner_meta.get("cleaner_section_sum_ms") or 0),
+            "cleaner_fallback_count": int(cleaner_meta.get("cleaner_fallback_count") or 0),
         },
         "cleaner_cache_hit": bool(cleaner_meta.get("cache_hit")),
         "cleaner_error": cleaner_meta.get("error"),
+        "cleaner_errors": cleaner_meta.get("section_errors") or {},
+        "cleaner_section_meta": {
+            "section_results": cleaner_meta.get("section_results") or {},
+            "section_timings": cleaner_meta.get("section_timings") or {},
+            "section_errors": cleaner_meta.get("section_errors") or {},
+            "section_cache_hits": cleaner_meta.get("section_cache_hits") or {},
+            "section_fallback_cached": cleaner_meta.get("section_fallback_cached") or {},
+            "fallback_sections": cleaner_meta.get("fallback_sections") or [],
+        },
     }
     return {
         "cleaned_results": cleaned,

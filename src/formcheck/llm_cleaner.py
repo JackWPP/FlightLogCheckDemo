@@ -5,6 +5,7 @@ import os
 import hashlib
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -39,16 +40,6 @@ def clean_field_values_with_meta(
     cfg = provider_config(provider)
     selected_model = model or os.getenv("CLEANER_MODEL") or DEFAULT_CLEANER_MODEL
     fallback = fallback_clean(fields, assignments, cfg.name, selected_model)
-    cache_key = cleaner_cache_key(fields, assignments, cfg.name, selected_model)
-    cache_dir = OUTPUTS_DIR / "runtime" / "cleaner_cache" / cache_key
-    cached = load_cleaner_cache(cache_dir, fields)
-    if cached:
-        return cached, {
-            "provider": cfg.name,
-            "model": selected_model,
-            "cache_hit": True,
-            "duration_ms": int((time.time() - started) * 1000),
-        }
     if not cfg.api_key:
         return fallback, {
             "provider": cfg.name,
@@ -59,7 +50,103 @@ def clean_field_values_with_meta(
             "error": "missing_api_key",
         }
 
-    prompt = build_cleaner_prompt(fields, assignments)
+    section_fields = cleaner_sections(fields, assignments)
+    if not section_fields:
+        return fallback, {
+            "provider": cfg.name,
+            "model": selected_model,
+            "cache_hit": False,
+            "fallback": True,
+            "duration_ms": int((time.time() - started) * 1000),
+            "skipped": True,
+        }
+
+    results = fallback.copy()
+    meta: dict[str, Any] = {
+        "provider": cfg.name,
+        "model": selected_model,
+        "cache_hit": False,
+        "section_results": {},
+        "section_timings": {},
+        "section_errors": {},
+        "section_cache_hits": {},
+        "section_fallback_cached": {},
+        "fallback_sections": [],
+    }
+    max_workers = min(cleaner_section_concurrency(), len(section_fields))
+    executor = ThreadPoolExecutor(max_workers=max_workers)
+    futures = {
+        executor.submit(clean_section_values, section, section_subset, assignments, cfg, selected_model, fallback): section
+        for section, section_subset in section_fields.items()
+    }
+    try:
+        for future in as_completed(futures, timeout=cleaner_total_budget_seconds()):
+            section = futures[future]
+            try:
+                section_results, section_meta = future.result()
+            except Exception as exc:  # noqa: BLE001
+                section_results, section_meta = section_fallback(
+                    section, section_fields[section], fallback, cfg.name, selected_model, f"{type(exc).__name__}: {exc}"
+                )
+            results.update(section_results)
+            merge_section_meta(meta, section, section_meta)
+    except TimeoutError:
+        meta["error"] = "cleaner_total_budget_exceeded"
+    finally:
+        for future, section in futures.items():
+            if future.done():
+                continue
+            future.cancel()
+            section_results, section_meta = section_fallback(
+                section,
+                section_fields[section],
+                fallback,
+                cfg.name,
+                selected_model,
+                "cleaner_total_budget_exceeded",
+            )
+            results.update(section_results)
+            merge_section_meta(meta, section, section_meta)
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    meta["duration_ms"] = int((time.time() - started) * 1000)
+    timings = list(meta["section_timings"].values())
+    meta["cleaner_total_ms"] = meta["duration_ms"]
+    meta["cleaner_section_max_ms"] = max(timings) if timings else 0
+    meta["cleaner_section_sum_ms"] = sum(timings)
+    meta["cleaner_fallback_count"] = len(meta["fallback_sections"])
+    meta["fallback_cached"] = any(meta["section_fallback_cached"].values())
+    if meta["fallback_sections"] and not meta.get("error"):
+        meta["error"] = "; ".join(
+            str(meta["section_errors"].get(section) or section)
+            for section in meta["fallback_sections"]
+        )
+    meta["cache_hit"] = bool(meta["section_cache_hits"]) and all(meta["section_cache_hits"].values())
+    return results, meta
+
+
+def clean_section_values(
+    section: str,
+    fields: list[FieldSpec],
+    assignments: dict[str, list[FieldCandidate]],
+    cfg,
+    selected_model: str,
+    fallback: dict[str, RecognitionResult],
+) -> tuple[dict[str, RecognitionResult], dict[str, Any]]:
+    started = time.time()
+    cache_key = cleaner_cache_key(fields, assignments, cfg.name, selected_model, section)
+    cache_dir = OUTPUTS_DIR / "runtime" / "cleaner_cache" / cache_key
+    cached = load_cleaner_cache(cache_dir, fields)
+    if cached:
+        return cached, {
+            "provider": cfg.name,
+            "model": selected_model,
+            "section": section,
+            "cache_hit": True,
+            "duration_ms": int((time.time() - started) * 1000),
+        }
+
+    prompt = build_cleaner_prompt(fields, assignments, section=section)
     payload = {
         "model": selected_model,
         "messages": [{"role": "user", "content": prompt}],
@@ -72,7 +159,7 @@ def clean_field_values_with_meta(
             cfg.base_url.rstrip("/") + "/chat/completions",
             headers=headers,
             json=payload,
-            timeout=cleaner_request_timeout_seconds(),
+            timeout=cleaner_request_timeout(),
         )
         response.raise_for_status()
         data = response.json()
@@ -80,14 +167,15 @@ def clean_field_values_with_meta(
         parsed = parse_json_content(content)
         cleaned = parsed.get("fields", parsed)
         if not isinstance(cleaned, dict):
-            return fallback
-        results = fallback.copy()
+            return section_fallback(section, fields, fallback, cfg.name, selected_model, "invalid_cleaner_response")
+        results = {field.id: fallback[field.id] for field in fields}
         for field in fields:
             item = cleaned.get(field.id)
             if not isinstance(item, dict):
                 continue
             raw = {
                 "cleaner": {"content": content, "usage": data.get("usage")},
+                "cleaner_section": section,
                 "candidates": candidates_to_json({field.id: assignments.get(field.id, [])}).get(field.id, []),
                 "needs_review": item.get("needs_review"),
                 "reason": item.get("reason"),
@@ -112,34 +200,56 @@ def clean_field_values_with_meta(
         return results, {
             "provider": cfg.name,
             "model": selected_model,
+            "section": section,
             "cache_hit": False,
             "duration_ms": int((time.time() - started) * 1000),
             "usage": data.get("usage"),
         }
     except Exception as exc:
-        for result in fallback.values():
-            result.raw = {**(result.raw or {}), "cleaner_error": str(exc)}
-            result.needs_review = result.needs_review or result.confidence < 0.8
-            if not result.review_reason:
-                result.review_reason = "Cleaner超时，使用本地候选兜底"
-        save_cleaner_cache(cache_dir, fallback)
-        return fallback, {
-            "provider": cfg.name,
-            "model": selected_model,
-            "cache_hit": False,
-            "fallback": True,
-            "fallback_cached": True,
-            "duration_ms": int((time.time() - started) * 1000),
-            "error": str(exc),
-        }
+        results, meta = section_fallback(section, fields, fallback, cfg.name, selected_model, str(exc), started)
+        save_cleaner_cache(cache_dir, results, meta={"timeout_cached_at": int(time.time()), "section": section})
+        meta["fallback_cached"] = True
+        return results, meta
 
 
 def cleaner_request_timeout_seconds() -> int:
     try:
-        value = int(os.getenv("CLEANER_REQUEST_TIMEOUT_SECONDS", "45"))
+        value = int(os.getenv("CLEANER_REQUEST_TIMEOUT_SECONDS", "75"))
     except ValueError:
-        return 45
+        return 75
     return max(5, min(value, 180))
+
+
+def cleaner_connect_timeout_seconds() -> int:
+    return int_env("CLEANER_CONNECT_TIMEOUT_SECONDS", 10, 1, 60)
+
+
+def cleaner_section_timeout_seconds() -> int:
+    return int_env("CLEANER_SECTION_TIMEOUT_SECONDS", cleaner_request_timeout_seconds(), 5, 300)
+
+
+def cleaner_total_budget_seconds() -> int:
+    return int_env("CLEANER_TOTAL_BUDGET_SECONDS", 90, 5, 600)
+
+
+def cleaner_section_concurrency() -> int:
+    return int_env("CLEANER_SECTION_CONCURRENCY", 3, 1, 8)
+
+
+def cleaner_timeout_cache_ttl_seconds() -> int:
+    return int_env("CLEANER_TIMEOUT_CACHE_TTL_SECONDS", 1800, 0, 86400)
+
+
+def cleaner_request_timeout() -> tuple[int, int]:
+    return cleaner_connect_timeout_seconds(), cleaner_section_timeout_seconds()
+
+
+def int_env(name: str, default: int, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+    return max(minimum, min(value, maximum))
 
 
 def cleaner_cache_key(
@@ -147,6 +257,7 @@ def cleaner_cache_key(
     assignments: dict[str, list[FieldCandidate]],
     provider: str,
     model: str,
+    section_id: str = "all",
 ) -> str:
     field_hash = ""
     if FIELDS_PATH.exists():
@@ -154,6 +265,7 @@ def cleaner_cache_key(
     payload = {
         "provider": provider,
         "model": model,
+        "section_id": section_id,
         "fields_hash": field_hash,
         "candidates": candidates_to_json(assignments),
         "field_ids": [field.id for field in fields],
@@ -169,8 +281,13 @@ def load_cleaner_cache(cache_dir: Path, fields: list[FieldSpec]) -> dict[str, Re
         payload = json.loads(path.read_text(encoding="utf-8"))
         results: dict[str, RecognitionResult] = {}
         field_ids = {field.id for field in fields}
+        meta = payload.get("__meta__") if isinstance(payload, dict) else None
+        if isinstance(meta, dict) and meta.get("timeout_cached_at"):
+            ttl = cleaner_timeout_cache_ttl_seconds()
+            if ttl <= 0 or int(time.time()) - int(meta.get("timeout_cached_at") or 0) > ttl:
+                return None
         for field_id, item in payload.items():
-            if field_id not in field_ids or not isinstance(item, dict):
+            if field_id == "__meta__" or field_id not in field_ids or not isinstance(item, dict):
                 continue
             raw = item.get("raw") or {}
             raw["cleaner_cache_hit"] = True
@@ -189,7 +306,7 @@ def load_cleaner_cache(cache_dir: Path, fields: list[FieldSpec]) -> dict[str, Re
         return None
 
 
-def save_cleaner_cache(cache_dir: Path, results: dict[str, RecognitionResult]) -> None:
+def save_cleaner_cache(cache_dir: Path, results: dict[str, RecognitionResult], meta: dict[str, Any] | None = None) -> None:
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
         payload = {
@@ -205,15 +322,20 @@ def save_cleaner_cache(cache_dir: Path, results: dict[str, RecognitionResult]) -
             }
             for field_id, result in results.items()
         }
+        if meta:
+            payload["__meta__"] = meta
         (cache_dir / "cleaned.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
 
 
-def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[FieldCandidate]]) -> str:
+def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[FieldCandidate]], section: str | None = None) -> str:
     field_payload = []
     for field in fields:
         if field.recognizer == "checkbox":
+            continue
+        candidates = assignments.get(field.id, [])
+        if not candidates:
             continue
         field_payload.append(
             {
@@ -231,7 +353,7 @@ def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[Fi
                         "assignment_score": round(candidate.score, 4),
                         "reason": candidate.reason,
                     }
-                    for candidate in assignments.get(field.id, [])[:6]
+                    for candidate in candidates[:6]
                 ],
             }
         )
@@ -243,9 +365,79 @@ def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[Fi
         '{"value":"原始/合并值","normalized_value":"归一化值","confidence":0.0,'
         '"evidence_block_ids":["b0001"],"needs_review":false,"reason":"简短原因"}。'
         "如果没有可靠候选，value 和 normalized_value 输出空字符串，confidence 低于 0.2，needs_review 为 true。"
+        "规则型字段可直接采用最高分候选并做轻量归一化，不要过度改写。"
         "日期尽量归一化为 YYYY-MM-DD；参考手册保留 AMM/TSM 开头编号；执照号去空格并大写；"
         "英文故障描述只保留主要英文手写内容，过滤字段标签。"
+        f"当前分区: {section or 'all'}。"
         f"OCR字段候选: {json.dumps(field_payload, ensure_ascii=False)}"
+    )
+
+
+def cleaner_sections(fields: list[FieldSpec], assignments: dict[str, list[FieldCandidate]]) -> dict[str, list[FieldSpec]]:
+    sections: dict[str, list[FieldSpec]] = {}
+    for field in fields:
+        if field.recognizer == "checkbox":
+            continue
+        if not assignments.get(field.id):
+            continue
+        sections.setdefault(field.section, []).append(field)
+    return sections
+
+
+def section_fallback(
+    section: str,
+    fields: list[FieldSpec],
+    fallback: dict[str, RecognitionResult],
+    provider: str,
+    model: str,
+    error: str,
+    started: float | None = None,
+) -> tuple[dict[str, RecognitionResult], dict[str, Any]]:
+    results: dict[str, RecognitionResult] = {}
+    for field in fields:
+        result = clone_result(fallback[field.id])
+        result.raw = {
+            **(result.raw or {}),
+            "cleaner_error": error,
+            "cleaner_section": section,
+            "cleaner_fallback_reason": error,
+        }
+        result.needs_review = result.needs_review or result.confidence < 0.8
+        if not result.review_reason:
+            result.review_reason = "Cleaner超时，使用本地候选兜底"
+        results[field.id] = result
+    return results, {
+        "provider": provider,
+        "model": model,
+        "section": section,
+        "cache_hit": False,
+        "fallback": True,
+        "duration_ms": int((time.time() - started) * 1000) if started else 0,
+        "error": error,
+    }
+
+
+def merge_section_meta(meta: dict[str, Any], section: str, section_meta: dict[str, Any]) -> None:
+    meta["section_results"][section] = "fallback" if section_meta.get("fallback") else "ok"
+    meta["section_timings"][section] = int(section_meta.get("duration_ms") or 0)
+    meta["section_cache_hits"][section] = bool(section_meta.get("cache_hit"))
+    meta["section_fallback_cached"][section] = bool(section_meta.get("fallback_cached"))
+    if section_meta.get("error"):
+        meta["section_errors"][section] = section_meta["error"]
+    if section_meta.get("fallback"):
+        meta["fallback_sections"].append(section)
+
+
+def clone_result(result: RecognitionResult) -> RecognitionResult:
+    return RecognitionResult(
+        value=result.value,
+        normalized_value=result.normalized_value,
+        confidence=result.confidence,
+        provider=result.provider,
+        model=result.model,
+        raw=dict(result.raw or {}),
+        needs_review=result.needs_review,
+        review_reason=result.review_reason,
     )
 
 

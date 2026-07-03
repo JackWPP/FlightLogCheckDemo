@@ -21,7 +21,12 @@ def issue_display_limit() -> int:
     return max(1, min(value, 8))
 
 
-def triage_issues(fields: list[dict[str, Any]], provider: str = "siliconflow", model: str | None = None) -> dict[str, Any]:
+def triage_issues(
+    fields: list[dict[str, Any]],
+    provider: str = "siliconflow",
+    model: str | None = None,
+    cleaner_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     started = time.time()
     failed = [field for field in fields if not field.get("passed")]
     all_problems = [field.get("message") for field in failed if field.get("message")]
@@ -44,6 +49,14 @@ def triage_issues(fields: list[dict[str, Any]], provider: str = "siliconflow", m
 
     cfg = provider_config(provider)
     selected_model = model or os.getenv("CLEANER_MODEL") or "deepseek-ai/DeepSeek-V4-Flash"
+    if should_skip_triage_for_cleaner_error(cleaner_meta):
+        fallback["issue_triage"]["duration_ms"] = int((time.time() - started) * 1000)
+        fallback["issue_triage"]["provider"] = "local:fallback"
+        fallback["issue_triage"]["model"] = "priority"
+        fallback["issue_triage"]["reason"] = "Cleaner异常，跳过LLM问题压缩"
+        fallback["issue_triage"]["cleaner_error"] = cleaner_meta.get("cleaner_error") or cleaner_meta.get("error")
+        fallback["issue_triage"]["fallback_sections"] = cleaner_meta.get("cleaner_section_meta", {}).get("fallback_sections", [])
+        return fallback
     if not cfg.api_key:
         fallback["issue_triage"]["duration_ms"] = int((time.time() - started) * 1000)
         fallback["issue_triage"]["provider"] = f"{cfg.name}:fallback"
@@ -113,6 +126,16 @@ def fallback_triage(failed: list[dict[str, Any]], all_problems: list[str], limit
             "reason": "本地优先级兜底",
         },
     }
+
+
+def should_skip_triage_for_cleaner_error(cleaner_meta: dict[str, Any] | None) -> bool:
+    if os.getenv("ISSUE_TRIAGE_SKIP_ON_CLEANER_ERROR", "1").strip().lower() in {"0", "false", "no", "off"}:
+        return False
+    if not cleaner_meta:
+        return False
+    section_meta = cleaner_meta.get("cleaner_section_meta") or {}
+    fallback_sections = section_meta.get("fallback_sections") or cleaner_meta.get("fallback_sections") or []
+    return bool(cleaner_meta.get("cleaner_error") or cleaner_meta.get("error") or fallback_sections)
 
 
 def issue_priority(field: dict[str, Any]) -> tuple[int, str]:

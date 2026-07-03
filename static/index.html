@@ -524,10 +524,11 @@
       try {
         const cfg = await fetch('/api/config').then(r => r.json());
         const cleanerShort = String(cfg.cleaner_model || '').replace(/^deepseek-ai\//, '');
+        const cleanerBudget = `${cfg.cleaner_section_concurrency || 3}路/${cfg.cleaner_section_timeout_seconds || 75}s/总${cfg.cleaner_total_budget_seconds || 90}s`;
         const missing = Object.entries(cfg.keys_configured || {})
           .filter(([, ok]) => !ok).map(([k]) => k);
         el.textContent = `OCR: PP-OCRv6 · Cleaner: ${cleanerShort} · ROI 复核: ${cfg.roi_provider}/${cfg.roi_model} · 配准: ${cfg.registration_mode} · OCR缓存: ${cfg.ppocr_cache_enabled ? 'on' : 'off'}`
-          + ` · VLM超时: ${cfg.vlm_request_timeout_seconds || 45}s`
+          + ` · Cleaner: ${cleanerBudget} · VLM超时: ${cfg.vlm_request_timeout_seconds || 45}s`
           + (missing.length ? ` · ⚠ 缺 key: ${missing.join(', ')}` : '');
       } catch (e) {
         el.textContent = '配置加载失败';

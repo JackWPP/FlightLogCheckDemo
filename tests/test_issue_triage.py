@@ -24,3 +24,27 @@ def test_fallback_triage_returns_pass_when_no_failures() -> None:
 
     assert result["problems"] == ["通过"]
     assert result["all_problems"] == []
+
+
+def test_issue_triage_skips_llm_when_cleaner_failed(monkeypatch) -> None:
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "test-key")
+    fields = [
+        {"id": "date", "label": "日期", "validator": "same_day", "message": "日期不是今天", "passed": False},
+    ]
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("triage LLM should be skipped")
+
+    monkeypatch.setattr("formcheck.issue_triage.requests.post", fail_if_called)
+    result = triage_issues(
+        fields,
+        provider="siliconflow",
+        cleaner_meta={
+            "cleaner_error": "timeout",
+            "cleaner_section_meta": {"fallback_sections": ["apu"]},
+        },
+    )
+
+    assert result["problems"] == ["日期不是今天"]
+    assert result["issue_triage"]["provider"] == "local:fallback"
+    assert result["issue_triage"]["reason"] == "Cleaner异常，跳过LLM问题压缩"
