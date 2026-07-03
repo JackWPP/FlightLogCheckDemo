@@ -65,7 +65,11 @@ def analyze_image(
     ocr_status = "done" if ocr_meta["public"].get("ok") else "failed"
     emit("ocr", ocr_status,
          duration_ms=int((time.time() - t) * 1000),
-         blocks=blocks_count)
+         blocks=blocks_count,
+         cache_hit=ocr_meta["public"].get("cache_hit"),
+         ocr_image_url=ocr_meta["public"].get("ocr_image_url"),
+         ocr_blocks=ocr_meta["public"].get("blocks") or [],
+         error=ocr_meta["public"].get("error"))
     timings["ocr_ms"] = int((time.time() - t) * 1000)
     t_roi = time.time()
     ppocr_roi_paths = build_ppocr_roi_evidence(ocr_meta, fields, canonical, run_dir)

@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import ASSETS_DIR, OUT_DIR, OUTPUTS_DIR, ROOT
@@ -33,6 +33,11 @@ app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
 def index() -> FileResponse:
     ensure_demo_sample()
     return FileResponse(ROOT / "static" / "index.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.get("/api/health")
@@ -70,6 +75,7 @@ def _public_config() -> dict:
         "roi_model": os.getenv("ROI_REVIEW_MODEL", "qwen3.7-plus"),
         "registration_mode": registration_mode(),
         "ppocr_cache_enabled": os.getenv("PPOCR_CACHE_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"},
+        "vlm_request_timeout_seconds": os.getenv("VLM_REQUEST_TIMEOUT_SECONDS", "45"),
         "keys_configured": keys,
         "ready_for_live_upload": all(keys.values()),
     }
@@ -180,7 +186,7 @@ async def analyze_stream(file: UploadFile = File(...)) -> StreamingResponse:
 
     async def event_gen():
         # Initial "started" so the frontend gets feedback immediately.
-        yield f"data: {json.dumps({'stage': 'started', 'run_id': run_id}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'stage': 'started', 'run_id': run_id, 'upload_url': f'/runs/{run_id}/{upload_path.name}'}, ensure_ascii=False)}\n\n"
         while True:
             evt = await loop.run_in_executor(None, q.get)
             if evt is None:

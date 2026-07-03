@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -56,7 +57,8 @@ def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, mod
     }
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        timeout = request_timeout_seconds()
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
@@ -76,8 +78,16 @@ def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, mod
             confidence=0.0,
             provider=cfg.name,
             model=selected_model,
-            raw={"error": str(exc)},
+            raw={"error": str(exc), "timeout_seconds": request_timeout_seconds()},
         )
+
+
+def request_timeout_seconds() -> int:
+    try:
+        value = int(os.getenv("VLM_REQUEST_TIMEOUT_SECONDS", "45"))
+    except ValueError:
+        return 45
+    return max(5, min(value, 180))
 
 
 def _parse_json_content(content: str) -> dict[str, Any]:

@@ -415,6 +415,7 @@
         const missing = Object.entries(cfg.keys_configured || {})
           .filter(([, ok]) => !ok).map(([k]) => k);
         el.textContent = `OCR: PP-OCRv6 · Cleaner: ${cleanerShort} · ROI 复核: ${cfg.roi_provider}/${cfg.roi_model} · 配准: ${cfg.registration_mode} · OCR缓存: ${cfg.ppocr_cache_enabled ? 'on' : 'off'}`
+          + ` · VLM超时: ${cfg.vlm_request_timeout_seconds || 45}s`
           + (missing.length ? ` · ⚠ 缺 key: ${missing.join(', ')}` : '');
       } catch (e) {
         el.textContent = '配置加载失败';
@@ -439,8 +440,12 @@
       document.getElementById('fieldRaw').textContent = '';
 
       let finalReport = null;
+      let uploadUrl = '';
       const handleEvent = (data) => {
-        if (data.stage === 'started') return;
+        if (data.stage === 'started') {
+          uploadUrl = data.upload_url || '';
+          return;
+        }
         if (data.stage === 'final') {
           finalReport = data.report;
         } else if (data.stage === 'error') {
@@ -448,6 +453,9 @@
             `<strong>处理失败</strong><span class="meta">${escapeHtml(data.error || '')}</span>`;
         } else {
           setStage(data.stage, data.status, data);
+          if (data.stage === 'ocr' && data.status === 'done') {
+            renderLiveOcrEvidence(uploadUrl, data.ocr_image_url || '', data.ocr_blocks || []);
+          }
         }
       };
 
@@ -663,11 +671,48 @@
       `;
     }
 
-    function renderLiveIdle() {
+    function renderLiveOcrEvidence(uploadUrl, ocrUrl, blocks) {
       lastManifest = null;
       demoViewer.classList.add('hidden');
       liveEvidence.classList.remove('hidden');
       imageToolbar.classList.add('hidden');
+      const blockCount = blocks.length;
+      liveEvidence.innerHTML = `
+        <div class="evidence-hero">
+          <strong>上传原图</strong>
+          <span>客户提交的原始照片，已经送入 PP-OCRv6。</span>
+          ${uploadUrl ? `<img src="${escapeAttr(uploadUrl)}" alt="上传原图">` : '<span>暂无原图</span>'}
+        </div>
+        <div class="evidence-strip">
+          <div class="evidence-tile">
+            <strong>PP-OCRv6 矫正 / 检测图</strong>
+            <span>OCR 已返回，后续正在做字段归属、清洗和本地规则。</span>
+            ${ocrUrl ? `<img src="${escapeAttr(ocrUrl)}" alt="PP-OCRv6 输出图">` : '<span>OCR 未返回检测图</span>'}
+          </div>
+          <div class="evidence-tile">
+            <strong>识别 Layout</strong>
+            <span>${blockCount} 个 OCR blocks，复核完成后会补齐字段结果。</span>
+            ${layoutOverlay(ocrUrl || uploadUrl, blocks)}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLiveIdle() {
+      lastManifest = null;
+      lastReport = null;
+      demoViewer.classList.add('hidden');
+      liveEvidence.classList.remove('hidden');
+      imageToolbar.classList.add('hidden');
+      document.getElementById('fieldCount').textContent = '等待上传';
+      summaryBox.innerHTML = '';
+      fieldTable.innerHTML = '';
+      problems.innerHTML = '';
+      statusBox.innerHTML = '<strong>未开始</strong><span class="meta">上传一张表单照片。</span>';
+      roiImage.removeAttribute('src');
+      roiMeta.textContent = '';
+      candidateList.innerHTML = '';
+      document.getElementById('fieldRaw').textContent = '';
       liveEvidence.innerHTML = `
         <div class="evidence-hero">
           <strong>上传原图</strong>
