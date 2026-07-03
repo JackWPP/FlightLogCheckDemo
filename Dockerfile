@@ -2,17 +2,24 @@
 # Flight Log Check Demo — production image
 # Build:  docker build -t flight-log-check-demo:latest .
 # Run:    docker compose up -d
+#
+# Base image note: we use the official `astral-sh/uv` Python image so uv is
+# already on PATH. This avoids a slow/failed `pip install uv` step that hits
+# PyPI from networks where pypi.org is blocked or throttled (e.g. mainland
+# China, some corporate networks). The project deps themselves are pulled via
+# UV_INDEX_URL → Tsinghua mirror below for the same reason.
 
-FROM python:3.12-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PORT=8003
-
-# Install uv (dependency manager pinned by uv.lock). pip is already present in the slim image.
-RUN pip install --no-cache-dir "uv>=0.4"
+    PORT=8003 \
+    # Tsinghua mirror — swap to https://mirrors.aliyun.com/pypi/simple/ or
+    # https://pypi.org/simple/ if you prefer. This affects `uv sync` only;
+    # `uv` itself comes from the base image.
+    UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 
 WORKDIR /app
 

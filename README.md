@@ -133,8 +133,10 @@ docs/technical_report.html
 git clone <this-repo> /opt/flight-log-check
 cd /opt/flight-log-check
 cp .env.example .env && nano .env       # 填三个云端 key
-docker compose build && docker compose up -d
+sudo docker compose build && sudo docker compose up -d
 ```
+
+> 默认 `Dockerfile` 已经把项目依赖指向清华 pip 镜像（`UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple`），基础镜像 `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` 自带 uv。**大陆服务器开箱可用**，不用再手动配 pip mirror。
 
 或者用 helper 脚本：
 

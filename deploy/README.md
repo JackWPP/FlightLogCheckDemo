@@ -144,3 +144,6 @@ A：`docker compose up -d` 不会重新加载 env。需要 `docker compose up -d
 
 **Q：能不能不装 docker？**
 A：可以。`uv sync --python 3.12` 后用 `uv run uvicorn formcheck.app:app --host 0.0.0.0 --port 8003` 直接跑，前面再自己套一个 nginx/systemd。Docker 只是为了让 "新机器上来就能跑"。
+
+**Q：`docker compose build` 卡在 `pip install uv` 或 `uv sync` 拉包？**
+A：默认 `Dockerfile` 用的基础镜像 `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` 自带 uv；项目依赖走清华 pip 镜像（`UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple`）。如果你所在网络访问 ghcr.io 或 PyPI 仍然慢，把 `Dockerfile` 里的 `UV_INDEX_URL` 换成更近的镜像（阿里云 `https://mirrors.aliyun.com/pypi/simple/`、腾讯云 `https://mirrors.cloud.tencent.com/pypi/simple`），并考虑给 docker daemon 配 `registry-mirrors`。
