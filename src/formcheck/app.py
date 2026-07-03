@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import uuid
 from pathlib import Path
@@ -10,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import ASSETS_DIR, OUT_DIR, OUTPUTS_DIR, ROOT
 from .demo import demo_payload, ensure_demo_sample
+from .llm_cleaner import DEFAULT_CLEANER_MODEL
 from .pipeline import analyze_image
 
 
@@ -39,15 +41,51 @@ def demo() -> dict:
     return demo_payload()
 
 
+def _public_config() -> dict:
+    """Surface which models/keys the server is currently using.
+
+    Returned to the frontend so the upload page can show a small
+    "powered by" line. Never includes key values.
+    """
+    keys = {
+        "paddleocr": bool(os.getenv("PADDLEOCR_AISTUDIO_TOKEN")),
+        "siliconflow": bool(os.getenv("SILICONFLOW_API_KEY")),
+        "aliyun": bool(os.getenv("ALIYUN_API_KEY")),
+    }
+    return {
+        "mode": "hybrid",
+        "cleaner_provider": "siliconflow",
+        "cleaner_model": os.getenv("CLEANER_MODEL") or DEFAULT_CLEANER_MODEL,
+        "roi_provider": os.getenv("ROI_REVIEW_PROVIDER", "aliyun"),
+        "roi_model": os.getenv("ROI_REVIEW_MODEL", "qwen3.7-plus"),
+        "keys_configured": keys,
+        "ready_for_live_upload": all(keys.values()),
+    }
+
+
+@app.get("/api/config")
+def config() -> dict:
+    return _public_config()
+
+
 @app.post("/api/analyze")
 def analyze(
     file: UploadFile = File(...),
-    provider: str = Form("mock"),
+    # All provider/model/mode knobs are env-driven. Kept as optional form
+    # fields so direct API callers can still override per-request.
+    provider: str | None = Form(None),
     model: str | None = Form(None),
-    mode: str = Form("hybrid"),
-    cleaner_provider: str = Form("siliconflow"),
+    mode: str | None = Form(None),
+    cleaner_provider: str | None = Form(None),
     cleaner_model: str | None = Form(None),
 ) -> dict:
+    cfg = _public_config()
+    resolved_provider = provider or cfg["roi_provider"]
+    resolved_model = model or cfg["roi_model"] or None
+    resolved_mode = mode or cfg["mode"]
+    resolved_cleaner_provider = cleaner_provider or cfg["cleaner_provider"]
+    resolved_cleaner_model = cleaner_model or cfg["cleaner_model"]
+
     run_id = uuid.uuid4().hex[:12]
     run_dir = OUT_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -57,12 +95,12 @@ def analyze(
         shutil.copyfileobj(file.file, fh)
     report = analyze_image(
         upload_path,
-        provider=provider,
-        model=model or None,
+        provider=resolved_provider,
+        model=resolved_model,
         run_id=run_id,
-        mode=mode,
-        cleaner_provider=cleaner_provider,
-        cleaner_model=cleaner_model or None,
+        mode=resolved_mode,
+        cleaner_provider=resolved_cleaner_provider,
+        cleaner_model=resolved_cleaner_model,
     )
     report["run_id"] = run_id
     report["upload_url"] = f"/runs/{run_id}/{upload_path.name}"
