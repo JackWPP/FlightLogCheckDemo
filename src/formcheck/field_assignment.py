@@ -74,6 +74,12 @@ def score_block_for_field(
     value_type = field.assignment.get("value_type")
     if value_type and pattern > 0:
         score += 0.25
+    if field.assignment.get("row") == "last":
+        y1, _y2 = bbox[1], bbox[3]
+        height = max(bbox[3] - bbox[1], 1.0)
+        score += max(0.0, min((block.center[1] - y1) / height, 1.0)) * 0.55
+    if field.validator == "int_range" and pattern < 0.2:
+        score *= 0.45
     reasons = []
     if overlap > 0:
         reasons.append(f"overlap={overlap:.2f}")
@@ -192,7 +198,13 @@ def pattern_score(field: FieldSpec, text: str) -> float:
             return 0.85
     if field.validator == "same_day":
         return 1.0 if re.search(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", text) else 0.0
-    if field.validator in {"int_range", "digit_length"}:
+    if field.validator == "int_range":
+        try:
+            number = float(compact)
+            return 1.0 if float(field.params["min"]) <= number <= float(field.params["max"]) else 0.08
+        except (TypeError, ValueError, KeyError):
+            return 0.0
+    if field.validator in {"digit_length", "number_less_than"}:
         return 0.9 if re.fullmatch(r"\d+(?:\.\d+)?", compact) else 0.0
     if field.validator in {"english_text", "bilingual_text"}:
         has_letter = bool(re.search(r"[A-Za-z]", text))

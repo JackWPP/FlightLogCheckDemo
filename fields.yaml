@@ -13,48 +13,48 @@ fields:
   - id: oil_eng1_added
     label: 02 发动机1加注量
     section: oil
-    bbox: [120, 635, 120, 58]
+    bbox: [170, 635, 160, 58]
     recognizer: numeric_text
     validator: int_range
     params: {min: 0, max: 4}
     fail_msg: 发动机1加注量不在0-4
-    assignment: {search_bbox: [80, 570, 150, 130], value_type: numeric, row: last}
+    assignment: {search_bbox: [170, 570, 160, 130], value_type: numeric, row: last}
   - id: oil_eng1_qty
     label: 03 发动机1滑油量
     section: oil
-    bbox: [240, 635, 155, 58]
+    bbox: [310, 635, 155, 58]
     recognizer: numeric_text
     validator: int_range
     params: {min: 15, max: 25}
     fail_msg: 发动机1滑油量不在15-25
-    assignment: {search_bbox: [220, 570, 180, 130], value_type: numeric, row: last}
+    assignment: {search_bbox: [310, 570, 170, 130], value_type: numeric, row: last}
   - id: oil_eng2_added
     label: 04 发动机2加注量
     section: oil
-    bbox: [395, 635, 120, 58]
+    bbox: [470, 635, 130, 58]
     recognizer: numeric_text
     validator: int_range
     params: {min: 0, max: 4}
     fail_msg: 发动机2加注量不在0-4
-    assignment: {search_bbox: [370, 570, 150, 130], value_type: numeric, row: last}
+    assignment: {search_bbox: [460, 570, 150, 130], value_type: numeric, row: last}
   - id: oil_eng2_qty
     label: 05 发动机2滑油量
     section: oil
-    bbox: [515, 635, 155, 58]
+    bbox: [580, 635, 155, 58]
     recognizer: numeric_text
     validator: int_range
     params: {min: 15, max: 25}
     fail_msg: 发动机2滑油量不在15-25
-    assignment: {search_bbox: [500, 570, 180, 130], value_type: numeric, row: last}
+    assignment: {search_bbox: [570, 570, 180, 130], value_type: numeric, row: last}
   - id: oil_apu_added
     label: 06 APU加注量
     section: oil
-    bbox: [670, 635, 120, 58]
+    bbox: [700, 635, 135, 58]
     recognizer: numeric_text
     validator: int_range
     params: {min: 0, max: 2}
     fail_msg: APU加注量不在0-2
-    assignment: {search_bbox: [640, 570, 150, 130], value_type: numeric, row: last}
+    assignment: {search_bbox: [680, 570, 170, 130], value_type: numeric, row: last}
   - id: oil_sign
     label: 07 滑油签名
     section: oil
