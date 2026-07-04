@@ -61,3 +61,86 @@ def test_int_range_penalizes_neighbor_column_value() -> None:
     assignments = assign_blocks_to_fields([field], [neighbor_added, oil_qty], (100, 100))
 
     assert assignments[field.id][0].block.text == "19.5"
+
+
+def test_station_alias_enters_exact_text_candidates() -> None:
+    field = FieldSpec(
+        id="action_station",
+        label="处理地点",
+        section="fault_action",
+        bbox=(0, 0, 120, 80),
+        recognizer="keyed_text",
+        validator="exact_text",
+        params={"allow": ["重庆", "渝", "Chongqing"]},
+        fail_msg="fail",
+    )
+    block = OcrBlock("station", "渝", 0.98, (10, 10, 60, 55), (35, 32))
+
+    assignments = assign_blocks_to_fields([field], [block], (120, 80))
+
+    assert assignments[field.id][0].block.text == "渝"
+
+
+def test_na_variant_enters_exact_text_candidates() -> None:
+    field = FieldSpec(
+        id="fault_flight_no",
+        label="航班号",
+        section="fault_action",
+        bbox=(0, 0, 120, 80),
+        recognizer="keyed_text",
+        validator="exact_text",
+        params={"allow": ["N/A", "NA"]},
+        fail_msg="fail",
+    )
+    block = OcrBlock("na", "N-A", 0.98, (10, 10, 80, 55), (45, 32))
+
+    assignments = assign_blocks_to_fields([field], [block], (120, 80))
+
+    assert assignments[field.id][0].block.text == "N-A"
+
+
+def test_prefix_or_exact_retains_noncompliant_reference_as_evidence() -> None:
+    field = FieldSpec(
+        id="action_ref",
+        label="参考手册",
+        section="fault_action",
+        bbox=(0, 0, 300, 80),
+        recognizer="keyed_text",
+        validator="prefix_or_exact",
+        params={"prefixes": ["AMM", "TSM"], "allow_exact": ["N/A", "NA"]},
+        fail_msg="fail",
+    )
+    block = OcrBlock("fla", "FLA320-05-51-14-200-803-A-X", 0.95, (10, 10, 260, 55), (135, 32))
+
+    assignments = assign_blocks_to_fields([field], [block], (300, 80))
+
+    assert assignments[field.id][0].block.text.startswith("FLA320")
+
+
+def test_bilingual_assignment_filters_form_labels_before_body() -> None:
+    field = FieldSpec(
+        id="action_description_bilingual",
+        label="处理措施-中英文内容",
+        section="fault_action",
+        bbox=(0, 0, 800, 220),
+        recognizer="free_text",
+        validator="bilingual_text",
+        params={"min_letters": 1, "min_cjk": 1},
+        fail_msg="fail",
+    )
+    blocks = [
+        OcrBlock("label1", "安装件号P/N ON", 0.99, (20, 20, 180, 50), (100, 35)),
+        OcrBlock("label2", "工作者签名SIGN", 0.99, (190, 20, 350, 50), (270, 35)),
+        OcrBlock("zh", "完成飞机遭鸟击后的检查，检查正常", 0.93, (40, 80, 520, 120), (280, 100)),
+        OcrBlock("en", "Finished the inspection after a Bird strike. check o/k", 0.93, (40, 130, 760, 170), (400, 150)),
+    ]
+
+    assignments = assign_blocks_to_fields([field], blocks, (800, 220))
+    texts = [candidate.block.text for candidate in assignments[field.id]]
+
+    assert "安装件号P/N ON" not in texts
+    assert "工作者签名SIGN" not in texts
+    assert texts[:2] == ["Finished the inspection after a Bird strike. check o/k", "完成飞机遭鸟击后的检查，检查正常"] or texts[:2] == [
+        "完成飞机遭鸟击后的检查，检查正常",
+        "Finished the inspection after a Bird strike. check o/k",
+    ]

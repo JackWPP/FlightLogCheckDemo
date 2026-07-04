@@ -11,6 +11,35 @@ def normalize_text(value: str) -> str:
     return (value or "").strip().replace("：", ":").replace("／", "/")
 
 
+def compact_text(value: str) -> str:
+    return re.sub(r"\s+", "", normalize_text(value))
+
+
+def normalize_na(value: str) -> str:
+    text = normalize_text(value)
+    compact = re.sub(r"[\s/\-]+", "", text.upper())
+    return "N/A" if compact == "NA" else text
+
+
+def normalize_station(value: str) -> str:
+    text = normalize_text(value)
+    compact = re.sub(r"\s+", "", text).lower()
+    if compact in {"重庆", "渝", "chongqing", "chungking"}:
+        return "重庆"
+    return text
+
+
+def normalize_exact_value(value: str) -> str:
+    na = normalize_na(value)
+    if na == "N/A":
+        return na
+    return normalize_station(na)
+
+
+def normalized_compact(value: str) -> str:
+    return compact_text(normalize_exact_value(value)).lower()
+
+
 def today_str(tz: str = "Asia/Shanghai") -> str:
     return datetime.now(ZoneInfo(tz)).strftime("%Y-%m-%d")
 
@@ -49,9 +78,8 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
         return float(params["min"]) <= number <= float(params["max"]), field.fail_msg
 
     if validator == "exact_text":
-        allowed = [normalize_text(str(item)).lower() for item in params.get("allow", [])]
-        compact = value.replace(" ", "").lower()
-        allowed_compact = [item.replace(" ", "") for item in allowed]
+        compact = normalized_compact(value)
+        allowed_compact = [normalized_compact(str(item)) for item in params.get("allow", [])]
         return compact in allowed_compact, field.fail_msg
 
     if validator == "checked":
@@ -75,14 +103,16 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
         ), field.fail_msg
 
     if validator == "name_not_place":
-        compact = value.replace(" ", "").lower()
-        blocked = [normalize_text(str(item)).replace(" ", "").lower() for item in params.get("not_allow", ["重庆", "chongqing"])]
+        compact = normalized_compact(value)
+        blocked = [normalized_compact(str(item)) for item in params.get("not_allow", ["重庆", "渝", "chongqing"])]
         return bool(compact) and compact not in blocked, field.fail_msg
 
     if validator == "prefix_or_exact":
-        upper = value.upper().replace(" ", "")
-        if upper in {str(item).upper() for item in params.get("allow_exact", [])}:
+        exact = normalized_compact(value).upper()
+        allowed_exact = {normalized_compact(str(item)).upper() for item in params.get("allow_exact", [])}
+        if exact in allowed_exact:
             return True, field.fail_msg
+        upper = compact_text(value).upper()
         return any(upper.startswith(str(prefix).upper()) for prefix in params.get("prefixes", [])), field.fail_msg
 
     if validator == "regex":

@@ -5,6 +5,50 @@ import re
 from typing import Any
 
 from .schemas import FieldCandidate, FieldSpec, OcrBlock
+from .validators import compact_text, normalize_exact_value, normalized_compact
+
+
+FORM_LABEL_TOKENS = [
+    "REPORTED BY",
+    "REPORT/WORK",
+    "AUTHORIZATION NO",
+    "SERVICE COMPLETED",
+    "DEFERRED ITEM",
+    "DEFER NO",
+    "RELEASE SIGN",
+    "LICENSE NO",
+    "PIREP",
+    "MAREP",
+    "ACTIONS",
+    "DATE",
+    "STATION",
+    "REF.",
+    "P/N",
+    "S/N",
+    "FIN",
+    "SIGN",
+    "报告者",
+    "授权号",
+    "完成维护类别",
+    "保留项目",
+    "放行签署",
+    "执照号",
+    "日期",
+    "地点",
+    "参考手册",
+    "处理措施",
+    "保留单号",
+    "第一联",
+    "原始记录",
+    "机组",
+    "机务",
+    "安装件号",
+    "拆下件号",
+    "拆下序号",
+    "安装序号",
+    "功能号",
+    "工作者签名",
+]
 
 
 def assign_blocks_to_fields(
@@ -91,7 +135,7 @@ def score_block_for_field(
 
 
 def incompatible_value(field: FieldSpec, text: str) -> bool:
-    compact = text.strip().replace(" ", "")
+    compact = compact_text(text)
     upper = compact.upper()
     value_type = field.assignment.get("value_type")
     if value_type in {"signature"}:
@@ -110,42 +154,39 @@ def incompatible_value(field: FieldSpec, text: str) -> bool:
             return False
         return not bool(re.search(r"CAAC|AUTH|授权|\d{6}", upper))
     if field.validator == "prefix_or_exact":
-        if upper in {str(item).upper() for item in field.params.get("allow_exact", [])}:
+        exact = normalized_compact(text).upper()
+        allow_exact = {normalized_compact(str(item)).upper() for item in field.params.get("allow_exact", [])}
+        if exact in allow_exact:
             return False
-        return not ("AMM" in upper or "TSM" in upper)
+        return False
     if field.validator == "exact_text":
-        allowed = [str(item).replace(" ", "").upper() for item in field.params.get("allow", [])]
+        allowed = [normalized_compact(str(item)).upper() for item in field.params.get("allow", [])]
         if not allowed:
             return False
-        return not any(item and (item in upper or upper in item) for item in allowed)
+        normalized = normalized_compact(text).upper()
+        return normalized not in allowed
     return False
 
 
 def label_noise(field: FieldSpec, text: str) -> bool:
-    upper = text.upper().strip()
-    label_tokens = [
-        "REPORTED BY",
-        "REPORT/WORK",
-        "AUTHORIZATION NO",
-        "SERVICE COMPLETED",
-        "DEFERRED ITEM",
-        "RELEASE SIGN",
-        "LICENSE NO",
-        "DATE",
-        "STATION",
-        "REF.",
-        "报告者",
-        "授权号",
-        "完成维护类别",
-        "保留项目",
-        "放行签署",
-        "执照号",
-        "日期",
-        "地点",
-    ]
     if field.recognizer == "checkbox":
         return False
-    return any(token in upper for token in label_tokens)
+    return looks_like_form_label_text(text)
+
+
+def looks_like_form_label_text(text: str) -> bool:
+    upper = text.upper().strip()
+    if not upper:
+        return False
+    bounded_tokens = {"FIN", "SIGN", "DATE", "STATION"}
+    for token in FORM_LABEL_TOKENS:
+        if token in bounded_tokens:
+            if re.search(rf"(^|[^A-Z]){re.escape(token)}([^A-Z]|$)", upper):
+                return True
+            continue
+        if token in upper:
+            return True
+    return False
 
 
 def overlap_ratio(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> float:
@@ -179,7 +220,7 @@ def center_distance_score(point: tuple[float, float], bbox: tuple[float, float, 
 
 
 def pattern_score(field: FieldSpec, text: str) -> float:
-    compact = text.strip().replace(" ", "")
+    compact = compact_text(text)
     upper = compact.upper()
     if field.recognizer == "checkbox":
         return 0.0
@@ -190,12 +231,15 @@ def pattern_score(field: FieldSpec, text: str) -> float:
         if "CAAC" in upper or re.search(r"\d{6}", upper):
             return 0.65
     if field.validator == "prefix_or_exact":
-        if upper in {str(item).upper() for item in field.params.get("allow_exact", [])}:
+        exact = normalized_compact(text).upper()
+        if exact in {normalized_compact(str(item)).upper() for item in field.params.get("allow_exact", [])}:
             return 1.0
         if any(upper.startswith(str(prefix).upper()) for prefix in field.params.get("prefixes", [])):
             return 1.0
         if "AMM" in upper or "TSM" in upper:
             return 0.85
+        if re.search(r"[A-Z]{2,}\d", upper):
+            return 0.35
     if field.validator == "same_day":
         return 1.0 if re.search(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", text) else 0.0
     if field.validator == "int_range":
@@ -207,19 +251,21 @@ def pattern_score(field: FieldSpec, text: str) -> float:
     if field.validator in {"digit_length", "number_less_than"}:
         return 0.9 if re.fullmatch(r"\d+(?:\.\d+)?", compact) else 0.0
     if field.validator in {"english_text", "bilingual_text"}:
+        if field.validator == "bilingual_text" and label_noise(field, text):
+            return 0.0
         has_letter = bool(re.search(r"[A-Za-z]", text))
         has_cjk = bool(re.search(r"[\u4e00-\u9fff]", text))
         if field.validator == "bilingual_text":
             return 0.9 if has_letter and has_cjk else (0.45 if has_letter or has_cjk else 0.0)
         return 0.8 if has_letter and not has_cjk else (0.35 if has_letter else 0.0)
     if field.validator == "exact_text":
-        allowed = [str(item).replace(" ", "").upper() for item in field.params.get("allow", [])]
-        if upper in allowed:
+        normalized = normalized_compact(text).upper()
+        allowed = [normalized_compact(str(item)).upper() for item in field.params.get("allow", [])]
+        if normalized in allowed:
             return 1.0
-        if any(item in upper or upper in item for item in allowed if item):
-            return 0.65
     if field.validator == "name_not_place":
-        return 0.6 if compact and "重庆" not in compact and "CHONGQING" not in upper else 0.0
+        normalized = normalize_exact_value(text)
+        return 0.6 if compact and normalized != "重庆" else 0.0
     value_type = field.assignment.get("value_type")
     if value_type == "signature":
         return 0.55 if not label_noise(field, text) else 0.0

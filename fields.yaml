@@ -61,7 +61,7 @@ fields:
     bbox: [790, 595, 190, 105]
     recognizer: signature_or_text
     validator: name_not_place
-    params: {not_allow: ["重庆", "Chongqing"]}
+    params: {not_allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 滑油签名不是姓名
     assignment: {search_bbox: [760, 555, 230, 150], value_type: signature, prefer_roi_vlm: true, needs_review: true}
 
@@ -71,16 +71,16 @@ fields:
     bbox: [28, 720, 170, 56]
     recognizer: keyed_text
     validator: exact_text
-    params: {allow: ["N/A"]}
+    params: {allow: ["N/A", "NA"]}
     fail_msg: 航班号不是N/A
-    assignment: {search_bbox: [0, 680, 230, 120], value_type: closed, allow_global_value_match: false}
+    assignment: {search_bbox: [0, 660, 260, 150], value_type: closed, allow_global_value_match: false}
   - id: fault_station
     label: 09 故障报告-地点
     section: fault_action
     bbox: [198, 720, 305, 56]
     recognizer: keyed_text
     validator: exact_text
-    params: {allow: ["重庆", "Chongqing"]}
+    params: {allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 故障地点不是重庆
     assignment: {search_bbox: [0, 660, 520, 140], value_type: closed, allow_global_value_match: false}
   - id: fault_reported_by
@@ -89,7 +89,7 @@ fields:
     bbox: [503, 720, 265, 56]
     recognizer: signature_or_text
     validator: name_not_place
-    params: {not_allow: ["重庆", "Chongqing"]}
+    params: {not_allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 报告人不是姓名
     assignment: {search_bbox: [420, 675, 360, 120], value_type: signature, prefer_roi_vlm: true, needs_review: true}
   - id: mechanic_checkbox
@@ -116,7 +116,7 @@ fields:
     bbox: [900, 700, 515, 72]
     recognizer: keyed_text
     validator: prefix_or_exact
-    params: {prefixes: ["AMM", "TSM"], allow_exact: ["N/A"]}
+    params: {prefixes: ["AMM", "TSM"], allow_exact: ["N/A", "NA"]}
     fail_msg: 参考手册不合规
     assignment: {search_bbox: [820, 680, 560, 140], value_type: ref}
   - id: action_defer_no
@@ -125,18 +125,18 @@ fields:
     bbox: [1420, 720, 210, 56]
     recognizer: keyed_text
     validator: exact_text
-    params: {allow: ["N/A"]}
+    params: {allow: ["N/A", "NA"]}
     fail_msg: 保留单号不是N/A
-    assignment: {search_bbox: [1380, 675, 280, 130], value_type: closed, allow_global_value_match: false}
+    assignment: {search_bbox: [1320, 660, 360, 160], value_type: closed, allow_global_value_match: false}
   - id: action_station
     label: 15 处理措施-地点
     section: fault_action
     bbox: [1740, 720, 190, 56]
     recognizer: keyed_text
     validator: exact_text
-    params: {allow: ["重庆", "Chongqing"]}
+    params: {allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 处理地点不是重庆
-    assignment: {search_bbox: [1640, 670, 330, 130], value_type: closed, allow_global_value_match: false}
+    assignment: {search_bbox: [1500, 640, 460, 170], value_type: closed, allow_global_value_match: false}
   - id: action_date
     label: 16 处理措施-日期
     section: fault_action
@@ -154,7 +154,7 @@ fields:
     validator: bilingual_text
     params: {min_letters: 1, min_cjk: 1}
     fail_msg: 处理措施缺少中英文
-    assignment: {search_bbox: [880, 760, 1280, 210], value_type: bilingual, merge: line}
+    assignment: {search_bbox: [880, 735, 1280, 185], value_type: bilingual, merge: line}
   - id: action_removed_part_info
     label: 18 拆下件信息
     section: fault_action
@@ -179,7 +179,7 @@ fields:
     bbox: [1865, 910, 175, 58]
     recognizer: signature_or_text
     validator: name_not_place
-    params: {not_allow: ["重庆", "Chongqing"]}
+    params: {not_allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 放行签署不是姓名
     assignment: {search_bbox: [1760, 895, 260, 110], value_type: signature, prefer_roi_vlm: true, needs_review: true}
   - id: action_authorization
@@ -225,9 +225,9 @@ fields:
     bbox: [1250, 1580, 180, 115]
     recognizer: keyed_text
     validator: exact_text
-    params: {allow: ["重庆", "Chongqing"]}
+    params: {allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 放行地点不是重庆
-    assignment: {search_bbox: [1120, 1550, 260, 170], value_type: closed, allow_global_value_match: false}
+    assignment: {search_bbox: [1000, 1510, 380, 220], value_type: closed, allow_global_value_match: false}
   - id: awr_date
     label: 26 适航放行-日期
     section: airworthiness_release
@@ -251,7 +251,7 @@ fields:
     bbox: [1805, 1580, 180, 115]
     recognizer: signature_or_text
     validator: name_not_place
-    params: {not_allow: ["重庆", "Chongqing"]}
+    params: {not_allow: ["重庆", "渝", "Chongqing"]}
     fail_msg: 放行签署不是姓名
     assignment: {search_bbox: [1700, 1550, 270, 170], value_type: signature, prefer_roi_vlm: true, needs_review: true}
   - id: awr_license

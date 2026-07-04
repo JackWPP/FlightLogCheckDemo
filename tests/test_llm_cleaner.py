@@ -3,7 +3,7 @@ from __future__ import annotations
 from formcheck.field_assignment import assign_blocks_to_fields
 import requests
 
-from formcheck.llm_cleaner import clean_field_values_with_meta, cleaner_sections, fallback_clean, sanitize_english_text
+from formcheck.llm_cleaner import clean_field_values_with_meta, cleaner_sections, fallback_clean, normalize_for_field, sanitize_english_text
 from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock
 
 
@@ -60,6 +60,45 @@ def test_sanitize_english_text_removes_cjk_tokens() -> None:
     assert sanitize_english_text("FaultmesSge:E/W. COND AFT CRG ISOL VALVE 库信息EW:") == (
         "FaultmesSge:E/W. COND AFT CRG ISOL VALVE EW:"
     )
+
+
+def test_fallback_clean_bilingual_filters_form_labels_and_merges_body() -> None:
+    field = FieldSpec(
+        id="action_description_bilingual",
+        label="处理措施-中英文内容",
+        section="fault_action",
+        bbox=(0, 0, 500, 200),
+        recognizer="free_text",
+        validator="bilingual_text",
+        params={"min_letters": 1, "min_cjk": 1},
+        fail_msg="fail",
+    )
+    blocks = [
+        OcrBlock("label", "安装件号P/N ON", 0.99, (0, 0, 100, 20), (50, 10)),
+        OcrBlock("zh", "完成飞机遭鸟击后的检查，检查正常", 0.9, (0, 40, 250, 70), (125, 55)),
+        OcrBlock("en", "Finished the inspection after a Bird strike. check o/k", 0.9, (0, 80, 450, 110), (225, 95)),
+    ]
+    assignments = {
+        field.id: [
+            FieldCandidate(field.id, blocks[0], 1.2, "label"),
+            FieldCandidate(field.id, blocks[1], 1.0, "body"),
+            FieldCandidate(field.id, blocks[2], 0.9, "body"),
+        ]
+    }
+
+    result = fallback_clean([field], assignments, "mock", "cleaner")[field.id]
+
+    assert "安装件号" not in result.normalized_value
+    assert "完成飞机" in result.normalized_value
+    assert "Finished" in result.normalized_value
+
+
+def test_normalize_for_field_station_and_na_variants() -> None:
+    station = FieldSpec("station", "地点", "s", (0, 0, 1, 1), "keyed_text", "exact_text", {"allow": ["重庆"]}, "fail")
+    ref = FieldSpec("ref", "参考手册", "s", (0, 0, 1, 1), "keyed_text", "prefix_or_exact", {"allow_exact": ["N/A"]}, "fail")
+
+    assert normalize_for_field(station, "渝") == "重庆"
+    assert normalize_for_field(ref, "N-A") == "N/A"
 
 
 def test_cleaner_timeout_fallback_is_cached(tmp_path, monkeypatch) -> None:

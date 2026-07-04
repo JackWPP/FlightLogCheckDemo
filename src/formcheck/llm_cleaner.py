@@ -12,12 +12,13 @@ from typing import Any
 import requests
 
 from .config import FIELDS_PATH, OUTPUTS_DIR, provider_config
-from .field_assignment import candidates_to_json
+from .field_assignment import candidates_to_json, looks_like_form_label_text
 from .schemas import FieldCandidate, FieldSpec, RecognitionResult
-from .validators import today_str
+from .validators import compact_text, normalize_date, normalize_exact_value, normalize_na, today_str
 
 
 DEFAULT_CLEANER_MODEL = "deepseek-ai/DeepSeek-V4-Flash"
+CLEANER_PROMPT_VERSION = "station-na-bilingual-v2"
 
 
 def clean_field_values(
@@ -266,6 +267,7 @@ def cleaner_cache_key(
         "provider": provider,
         "model": model,
         "section_id": section_id,
+        "prompt_version": CLEANER_PROMPT_VERSION,
         "fields_hash": field_hash,
         "candidates": candidates_to_json(assignments),
         "field_ids": [field.id for field in fields],
@@ -353,7 +355,7 @@ def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[Fi
                         "assignment_score": round(candidate.score, 4),
                         "reason": candidate.reason,
                     }
-                    for candidate in candidates[:6]
+                    for candidate in cleaner_prompt_candidates(field, candidates)
                 ],
             }
         )
@@ -366,8 +368,12 @@ def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[Fi
         '"evidence_block_ids":["b0001"],"needs_review":false,"reason":"简短原因"}。'
         "如果没有可靠候选，value 和 normalized_value 输出空字符串，confidence 低于 0.2，needs_review 为 true。"
         "规则型字段可直接采用最高分候选并做轻量归一化，不要过度改写。"
-        "日期尽量归一化为 YYYY-MM-DD；参考手册保留 AMM/TSM 开头编号；执照号去空格并大写；"
-        "英文故障描述只保留主要英文手写内容，过滤字段标签；中英文字段必须保留中文和英文两部分。"
+        "渝是重庆简称，Chongqing也归一为重庆；NA、N/A、N-A、N A、N／A 都归一为 N/A。"
+        "日期尽量归一化为 YYYY-MM-DD；参考手册只有 AMM/TSM 开头或 N/A/NA 合规，"
+        "但如果候选是 FLA320 等其他编号也必须保留原值，交给本地规则判失败，不要输出空。"
+        "执照号去空格并大写；英文故障描述只保留主要英文手写内容，过滤字段标签。"
+        "中英文字段必须优先合并大文本框正文候选中的中文正文和英文正文，"
+        "忽略表头/格线标签，例如 P/N、S/N、FIN、SIGN、安装件号、拆下序号、工作者签名。"
         f"当前分区: {section or 'all'}。"
         f"OCR字段候选: {json.dumps(field_payload, ensure_ascii=False)}"
     )
@@ -477,7 +483,12 @@ def best_candidate_text(field: FieldSpec, candidates: list[FieldCandidate]) -> s
         ]
         return " ".join(texts)
     if field.validator == "bilingual_text":
-        return " ".join(candidate.block.text for candidate in candidates[:6] if candidate.block.text.strip())
+        texts = [
+            candidate.block.text.strip()
+            for candidate in candidates[:8]
+            if looks_like_bilingual_body_candidate(candidate.block.text)
+        ]
+        return " ".join(texts)
     return candidates[0].block.text
 
 
@@ -485,17 +496,52 @@ def normalize_for_field(field: FieldSpec, value: str) -> str:
     text = (value or "").strip()
     if field.validator == "english_text":
         return sanitize_english_text(text)
-    if field.validator in {"regex", "prefix_or_exact"}:
+    if field.validator == "exact_text":
+        return normalize_exact_value(text)
+    if field.validator == "prefix_or_exact":
+        na = normalize_na(text)
+        return "N/A" if na == "N/A" else compact_text(text).upper()
+    if field.validator == "regex":
         return text.replace(" ", "").upper()
     if field.validator == "same_day":
-        from .validators import normalize_date
-
         return normalize_date(text)
     if field.validator in {"digit_length", "number_less_than"}:
         import re
 
         return re.sub(r"\D", "", text)
     return text
+
+
+def looks_like_form_label(value: str) -> bool:
+    return looks_like_form_label_text(value)
+
+
+def cleaner_prompt_candidates(field: FieldSpec, candidates: list[FieldCandidate]) -> list[FieldCandidate]:
+    if field.validator != "bilingual_text":
+        return candidates[:6]
+    body = [candidate for candidate in candidates[:10] if looks_like_bilingual_body_candidate(candidate.block.text)]
+    return (body or candidates)[:6]
+
+
+def looks_like_bilingual_body_candidate(value: str) -> bool:
+    text = (value or "").strip()
+    if not text or looks_like_form_label(text):
+        return False
+    compact = compact_text(text)
+    upper = compact.upper()
+    if re.fullmatch(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", compact):
+        return False
+    if upper in {"N/A", "NA", "MA", "M/A"}:
+        return False
+    if text in {"渝", "重庆"}:
+        return False
+    if re.fullmatch(r"\d+(?:\.\d+)?", compact):
+        return False
+    if re.fullmatch(r"[A-Z]{2,}\d[\w.\-/]*", upper):
+        return False
+    cjk_count = len(re.findall(r"[\u4e00-\u9fff]", text))
+    letter_count = len(re.findall(r"[A-Za-z]", text))
+    return cjk_count >= 4 or letter_count >= 12
 
 
 def sanitize_english_text(value: str) -> str:

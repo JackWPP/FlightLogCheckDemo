@@ -43,7 +43,7 @@ def build_prompt(field: FieldSpec) -> str:
         "numeric_text": "只返回手写或印刷数字，不要返回标签文字；如果有多个数字，请返回与字段名最相关的数字或数字列表。",
         "date_text": "只返回日期值，尽量归一化为 YYYY-MM-DD；不要返回 DATE 标签。",
         "keyed_text": "只返回字段填写值，不要返回字段标签。",
-        "free_text": "返回该字段中的完整手写文本；如果有中英文混合，照实返回。",
+        "free_text": "忽略印刷表头、格线标签和字段名，只返回手写正文；如果有中英文混合，中文和英文都照实返回。",
         "signature_or_text": "返回签名区域读到的姓名；如果无法读出但有签名痕迹，value 写 SIGN_PRESENT。",
     }
     return (
@@ -52,6 +52,7 @@ def build_prompt(field: FieldSpec) -> str:
         f"字段: {field.label}。"
         f"识别提示: {hints.get(field.recognizer, '只返回字段填写值，不要返回标签文字')}。"
         f"校验规则: {field.validator} {json.dumps(field.params, ensure_ascii=False)}。"
+        "若规则是 bilingual_text，必须读取正文里的中文和英文，忽略 P/N、S/N、FIN、SIGN 等表格标签。"
         "如果字段为空，value 和 normalized_value 都输出空字符串。"
         'JSON格式: {"value":"识别值","normalized_value":"归一化值","confidence":0.0}'
     )

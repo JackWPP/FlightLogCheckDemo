@@ -41,10 +41,34 @@ def test_bilingual_text() -> None:
 
 
 def test_name_not_place() -> None:
-    spec = field("name_not_place", {"not_allow": ["重庆", "Chongqing"]})
+    spec = field("name_not_place", {"not_allow": ["重庆", "渝", "Chongqing"]})
     assert validate(spec, RecognitionResult("李四"))[0]
     assert not validate(spec, RecognitionResult("重庆"))[0]
+    assert not validate(spec, RecognitionResult("渝"))[0]
     assert not validate(spec, RecognitionResult(""))[0]
+
+
+def test_station_aliases_are_accepted() -> None:
+    spec = field("exact_text", {"allow": ["重庆", "渝", "Chongqing"]})
+    assert validate(spec, RecognitionResult("重庆"))[0]
+    assert validate(spec, RecognitionResult("渝"))[0]
+    assert validate(spec, RecognitionResult("Chongqing"))[0]
+    assert not validate(spec, RecognitionResult("成都"))[0]
+
+
+def test_na_variants_are_accepted() -> None:
+    spec = field("exact_text", {"allow": ["N/A", "NA"]})
+    for value in ["NA", "N/A", "n/a", "N／A", "N-A", "N A"]:
+        assert validate(spec, RecognitionResult(value))[0]
+    assert not validate(spec, RecognitionResult("MA"))[0]
+
+
+def test_prefix_or_exact_keeps_na_strict_and_rejects_other_prefixes() -> None:
+    spec = field("prefix_or_exact", {"prefixes": ["AMM", "TSM"], "allow_exact": ["N/A", "NA"]})
+    assert validate(spec, RecognitionResult("AMM35-22-42"))[0]
+    assert validate(spec, RecognitionResult("TSM21"))[0]
+    assert validate(spec, RecognitionResult("N-A"))[0]
+    assert not validate(spec, RecognitionResult("FLA320-05-51-14"))[0]
 
 
 def test_digit_length() -> None:
