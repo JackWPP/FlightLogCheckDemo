@@ -142,11 +142,11 @@ def issue_priority(field: dict[str, Any]) -> tuple[int, str]:
     validator = str(field.get("validator") or "")
     recognizer = str(field.get("recognizer") or "")
     label = str(field.get("label") or "")
-    if validator in {"regex", "digit_length", "same_day"}:
+    if validator in {"regex", "digit_length", "same_day", "number_less_than"}:
         return (0, label)
     if "签" in label or recognizer == "signature_or_text":
         return (1, label)
-    if validator in {"exact_text", "exact_text_or_ocr_match"}:
+    if validator in {"exact_text", "exact_text_or_ocr_match", "name_not_place"}:
         return (2, label)
     return (3, label)
 

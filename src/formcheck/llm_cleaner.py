@@ -367,7 +367,7 @@ def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[Fi
         "如果没有可靠候选，value 和 normalized_value 输出空字符串，confidence 低于 0.2，needs_review 为 true。"
         "规则型字段可直接采用最高分候选并做轻量归一化，不要过度改写。"
         "日期尽量归一化为 YYYY-MM-DD；参考手册保留 AMM/TSM 开头编号；执照号去空格并大写；"
-        "英文故障描述只保留主要英文手写内容，过滤字段标签。"
+        "英文故障描述只保留主要英文手写内容，过滤字段标签；中英文字段必须保留中文和英文两部分。"
         f"当前分区: {section or 'all'}。"
         f"OCR字段候选: {json.dumps(field_payload, ensure_ascii=False)}"
     )
@@ -476,6 +476,8 @@ def best_candidate_text(field: FieldSpec, candidates: list[FieldCandidate]) -> s
             if (cleaned := sanitize_english_text(candidate.block.text))
         ]
         return " ".join(texts)
+    if field.validator == "bilingual_text":
+        return " ".join(candidate.block.text for candidate in candidates[:6] if candidate.block.text.strip())
     return candidates[0].block.text
 
 
@@ -489,7 +491,7 @@ def normalize_for_field(field: FieldSpec, value: str) -> str:
         from .validators import normalize_date
 
         return normalize_date(text)
-    if field.validator == "digit_length":
+    if field.validator in {"digit_length", "number_less_than"}:
         import re
 
         return re.sub(r"\D", "", text)

@@ -1,40 +1,89 @@
 {
   "ok": false,
   "problems": [
+    "注册号不是4位数字",
+    "处理日期不是今天",
+    "授权号不是6位数字",
+    "放行日期不是今天"
+  ],
+  "all_problems": [
+    "注册号不是4位数字",
     "航班号不是N/A",
-    "报告人不是张三",
+    "报告人不是姓名",
     "处理地点不是重庆",
-    "日期不是今天",
-    "工作者签名不是张三",
+    "处理日期不是今天",
     "授权号不是6位数字",
     "放行日期不是今天",
-    "放行签署缺失",
     "执照号不合规"
   ],
+  "issue_triage": {
+    "provider": "local:fallback",
+    "model": "priority",
+    "limit": 4,
+    "selected": [
+      "注册号不是4位数字",
+      "处理日期不是今天",
+      "授权号不是6位数字",
+      "放行日期不是今天"
+    ],
+    "suppressed": [
+      "航班号不是N/A",
+      "报告人不是姓名",
+      "处理地点不是重庆",
+      "执照号不合规"
+    ],
+    "reason": "Cleaner异常，跳过LLM问题压缩",
+    "duration_ms": 0,
+    "cleaner_error": "missing_api_key",
+    "fallback_sections": []
+  },
   "summary": {
-    "field_count": 21,
-    "passed_count": 12,
-    "failed_count": 9,
-    "review_count": 8,
+    "field_count": 29,
+    "passed_count": 21,
+    "failed_count": 8,
+    "review_count": 13,
     "ocr_block_count": 252,
     "cleaner_model": "deepseek-ai/DeepSeek-V4-Flash",
-    "ocr_ok": true
+    "ocr_ok": true,
+    "ocr_cache_hit": true
   },
   "registration": {
-    "ok": true,
-    "inliers": 76,
-    "reproj_rmse": 1.213911771774292,
-    "reject_reason": null
+    "mode": "off",
+    "ok": false,
+    "enabled": false,
+    "inliers": 0,
+    "reproj_rmse": null,
+    "reject_reason": "REGISTRATION_MODE=off"
   },
-  "warped_url": "/runs/hybrid_sample_01_roi_review_v3/warped.png",
+  "warped_url": null,
   "mode": "hybrid",
+  "timings": {
+    "ocr_ms": 40,
+    "ppocr_submit_ms": 0,
+    "ppocr_poll_ms": 0,
+    "ppocr_download_ms": 0,
+    "ppocr_extract_ms": 0,
+    "ppocr_total_ms": 12,
+    "assignment_ms": 21,
+    "cleaner_ms": 3,
+    "cleaner_total_ms": 3,
+    "cleaner_section_max_ms": 0,
+    "cleaner_section_sum_ms": 0,
+    "cleaner_fallback_count": 0,
+    "ppocr_roi_ms": 81,
+    "registration_ms": 0,
+    "validate_ms": 8,
+    "review_ms": 7,
+    "issue_triage_ms": 0,
+    "total_ms": 138
+  },
   "ocr": {
     "enabled": true,
     "ok": true,
     "error": null,
-    "job_id": "66226315596021760",
+    "job_id": "cache",
     "input": "original_upload",
-    "ocr_image_url": "/runs/hybrid_sample_01_roi_review_v3/ppocrv6/ocr_image_0.jpg",
+    "ocr_image_url": "/runs/local_29_rule_smoke/ppocrv6/ocr_image_0.jpg",
     "blocks": [
       {
         "id": "b0000",
@@ -4070,80 +4119,13 @@
       }
     ],
     "candidates": {
-      "oil_last_row_added": [
-        {
-          "block_id": "b0107",
-          "text": "0",
-          "block_score": 0.9994138479232788,
-          "assignment_score": 3.270535271156457,
-          "box": [
-            100.0,
-            311.0,
-            118.0,
-            332.0
-          ],
-          "center": [
-            109.0,
-            321.5
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0096",
-          "text": "0",
-          "block_score": 0.9907779693603516,
-          "assignment_score": 3.2561445594027965,
-          "box": [
-            99.0,
-            291.0,
-            118.0,
-            309.0
-          ],
-          "center": [
-            108.5,
-            300.0
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0117",
-          "text": "0",
-          "block_score": 0.9994937181472778,
-          "assignment_score": 3.240997428679514,
-          "box": [
-            102.0,
-            335.0,
-            121.0,
-            354.0
-          ],
-          "center": [
-            111.5,
-            344.5
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0085",
-          "text": "0",
-          "block_score": 0.9998050332069397,
-          "assignment_score": 3.2306909827696644,
-          "box": [
-            98.0,
-            267.0,
-            116.0,
-            287.0
-          ],
-          "center": [
-            107.0,
-            277.0
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
+      "ac_reg_digits": [],
+      "oil_eng1_added": [
         {
           "block_id": "b0129",
           "text": "0",
           "block_score": 0.9992024302482605,
-          "assignment_score": 3.2136853083718364,
+          "assignment_score": 3.212802547144275,
           "box": [
             98.0,
             357.0,
@@ -4157,10 +4139,44 @@
           "reason": "overlap=1.00,center_near,pattern=0.90"
         },
         {
+          "block_id": "b0117",
+          "text": "0",
+          "block_score": 0.9994937181472778,
+          "assignment_score": 3.195686503704885,
+          "box": [
+            102.0,
+            335.0,
+            121.0,
+            354.0
+          ],
+          "center": [
+            111.5,
+            344.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0107",
+          "text": "0",
+          "block_score": 0.9994138479232788,
+          "assignment_score": 2.4633759460749194,
+          "box": [
+            100.0,
+            311.0,
+            118.0,
+            332.0
+          ],
+          "center": [
+            109.0,
+            321.5
+          ],
+          "reason": "overlap=0.54,center_near,pattern=0.90"
+        },
+        {
           "block_id": "b0106",
           "text": "3",
           "block_score": 0.9999939203262329,
-          "assignment_score": 3.204117301765669,
+          "assignment_score": 1.9994370956600211,
           "box": [
             41.0,
             311.0,
@@ -4171,117 +4187,15 @@
             47.5,
             318.5
           ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0095",
-          "text": "2",
-          "block_score": 0.9999886751174927,
-          "assignment_score": 3.204017476429422,
-          "box": [
-            44.0,
-            290.0,
-            56.0,
-            305.0
-          ],
-          "center": [
-            50.0,
-            297.5
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0084",
-          "text": "1",
-          "block_score": 0.998521625995636,
-          "assignment_score": 3.1907501167749315,
-          "box": [
-            45.0,
-            267.0,
-            56.0,
-            283.0
-          ],
-          "center": [
-            50.5,
-            275.0
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
+          "reason": "overlap=0.26,center_near,pattern=0.90"
         }
       ],
-      "oil_qty": [
-        {
-          "block_id": "b0108",
-          "text": "19.5",
-          "block_score": 0.9987013339996338,
-          "assignment_score": 3.258454863347468,
-          "box": [
-            161.0,
-            312.0,
-            204.0,
-            335.0
-          ],
-          "center": [
-            182.5,
-            323.5
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0097",
-          "text": "19.5",
-          "block_score": 0.9996286630630493,
-          "assignment_score": 3.251632980082182,
-          "box": [
-            161.0,
-            291.0,
-            202.0,
-            314.0
-          ],
-          "center": [
-            181.5,
-            302.5
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0118",
-          "text": "19.5",
-          "block_score": 0.9927990436553955,
-          "assignment_score": 3.2163622464202044,
-          "box": [
-            160.0,
-            332.0,
-            199.0,
-            359.0
-          ],
-          "center": [
-            179.5,
-            345.5
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
-        {
-          "block_id": "b0086",
-          "text": "17.5",
-          "block_score": 0.998911440372467,
-          "assignment_score": 3.2101918260999884,
-          "box": [
-            157.0,
-            270.0,
-            194.0,
-            292.0
-          ],
-          "center": [
-            175.5,
-            281.0
-          ],
-          "reason": "overlap=1.00,center_near,pattern=0.90"
-        },
+      "oil_eng1_qty": [
         {
           "block_id": "b0127",
           "text": "19.5",
           "block_score": 0.9998214244842529,
-          "assignment_score": 3.1762021598103134,
+          "assignment_score": 3.2486321194385104,
           "box": [
             155.0,
             355.0,
@@ -4295,27 +4209,97 @@
           "reason": "overlap=1.00,center_near,pattern=0.90"
         },
         {
-          "block_id": "b0087",
-          "text": "0",
-          "block_score": 0.9790927171707153,
-          "assignment_score": 2.257206016258261,
+          "block_id": "b0118",
+          "text": "19.5",
+          "block_score": 0.9927990436553955,
+          "assignment_score": 3.240829977260763,
           "box": [
-            232.0,
-            276.0,
-            252.0,
-            294.0
+            160.0,
+            332.0,
+            199.0,
+            359.0
           ],
           "center": [
-            242.0,
-            285.0
+            179.5,
+            345.5
           ],
-          "reason": "overlap=0.40,center_near,pattern=0.90"
+          "reason": "overlap=1.00,center_near,pattern=0.90"
         },
+        {
+          "block_id": "b0108",
+          "text": "19.5",
+          "block_score": 0.9987013339996338,
+          "assignment_score": 2.6208649917583653,
+          "box": [
+            161.0,
+            312.0,
+            204.0,
+            335.0
+          ],
+          "center": [
+            182.5,
+            323.5
+          ],
+          "reason": "overlap=0.62,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0117",
+          "text": "0",
+          "block_score": 0.9994937181472778,
+          "assignment_score": 1.6112503868323564,
+          "box": [
+            102.0,
+            335.0,
+            121.0,
+            354.0
+          ],
+          "center": [
+            111.5,
+            344.5
+          ],
+          "reason": "center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0129",
+          "text": "0",
+          "block_score": 0.9992024302482605,
+          "assignment_score": 1.6009822123454756,
+          "box": [
+            98.0,
+            357.0,
+            116.0,
+            375.0
+          ],
+          "center": [
+            107.0,
+            366.0
+          ],
+          "reason": "center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0107",
+          "text": "0",
+          "block_score": 0.9994138479232788,
+          "assignment_score": 1.58307436179325,
+          "box": [
+            100.0,
+            311.0,
+            118.0,
+            332.0
+          ],
+          "center": [
+            109.0,
+            321.5
+          ],
+          "reason": "center_near,pattern=0.90"
+        }
+      ],
+      "oil_eng2_added": [
         {
           "block_id": "b0130",
           "text": "0",
           "block_score": 0.9910591244697571,
-          "assignment_score": 2.022771450680189,
+          "assignment_score": 3.2316217524778192,
           "box": [
             235.0,
             363.0,
@@ -4326,24 +4310,251 @@
             244.5,
             371.5
           ],
-          "reason": "overlap=0.26,center_near,pattern=0.90"
+          "reason": "overlap=1.00,center_near,pattern=0.90"
         },
         {
-          "block_id": "b0098",
+          "block_id": "b0119",
           "text": "0",
-          "block_score": 0.9261118173599243,
-          "assignment_score": 1.7186915101272149,
+          "block_score": 0.8228945136070251,
+          "assignment_score": 3.163648504133337,
           "box": [
             239.0,
-            295.0,
-            257.0,
-            314.0
+            336.0,
+            258.0,
+            354.0
           ],
           "center": [
-            248.0,
-            304.5
+            248.5,
+            345.0
           ],
-          "reason": "overlap=0.06,center_near,pattern=0.90"
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0109",
+          "text": "0",
+          "block_score": 0.99949049949646,
+          "assignment_score": 2.7588164160189197,
+          "box": [
+            241.0,
+            315.0,
+            258.0,
+            335.0
+          ],
+          "center": [
+            249.5,
+            325.0
+          ],
+          "reason": "overlap=0.72,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0120",
+          "text": "18.5",
+          "block_score": 0.999800443649292,
+          "assignment_score": 1.631283497869687,
+          "box": [
+            289.0,
+            333.0,
+            333.0,
+            360.0
+          ],
+          "center": [
+            311.0,
+            346.5
+          ],
+          "reason": "overlap=0.03,pattern=0.90"
+        },
+        {
+          "block_id": "b0110",
+          "text": "19.5",
+          "block_score": 0.9968204498291016,
+          "assignment_score": 1.5733945455947136,
+          "box": [
+            290.0,
+            311.0,
+            331.0,
+            338.0
+          ],
+          "center": [
+            310.5,
+            324.5
+          ],
+          "reason": "overlap=0.00,pattern=0.90"
+        }
+      ],
+      "oil_eng2_qty": [
+        {
+          "block_id": "b0131",
+          "text": "19.0",
+          "block_score": 0.9999000430107117,
+          "assignment_score": 3.2316245881370005,
+          "box": [
+            294.0,
+            355.0,
+            335.0,
+            380.0
+          ],
+          "center": [
+            314.5,
+            367.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0120",
+          "text": "18.5",
+          "block_score": 0.999800443649292,
+          "assignment_score": 3.2230172551390592,
+          "box": [
+            289.0,
+            333.0,
+            333.0,
+            360.0
+          ],
+          "center": [
+            311.0,
+            346.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0110",
+          "text": "19.5",
+          "block_score": 0.9968204498291016,
+          "assignment_score": 2.640839378017845,
+          "box": [
+            290.0,
+            311.0,
+            331.0,
+            338.0
+          ],
+          "center": [
+            310.5,
+            324.5
+          ],
+          "reason": "overlap=0.64,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0121",
+          "text": "0",
+          "block_score": 0.9979003667831421,
+          "assignment_score": 2.2108388500110627,
+          "box": [
+            373.0,
+            335.0,
+            390.0,
+            353.0
+          ],
+          "center": [
+            381.5,
+            344.0
+          ],
+          "reason": "overlap=0.38,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0132",
+          "text": "0",
+          "block_score": 0.99250727891922,
+          "assignment_score": 2.0845937186195207,
+          "box": [
+            375.0,
+            360.0,
+            390.0,
+            374.0
+          ],
+          "center": [
+            382.5,
+            367.0
+          ],
+          "reason": "overlap=0.30,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0111",
+          "text": "0",
+          "block_score": 0.9998517036437988,
+          "assignment_score": 1.9975430632763378,
+          "box": [
+            371.0,
+            311.0,
+            389.0,
+            332.0
+          ],
+          "center": [
+            380.0,
+            321.5
+          ],
+          "reason": "overlap=0.26,center_near,pattern=0.90"
+        }
+      ],
+      "oil_apu_added": [
+        {
+          "block_id": "b0132",
+          "text": "0",
+          "block_score": 0.99250727891922,
+          "assignment_score": 3.2189495701979993,
+          "box": [
+            375.0,
+            360.0,
+            390.0,
+            374.0
+          ],
+          "center": [
+            382.5,
+            367.0
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0121",
+          "text": "0",
+          "block_score": 0.9979003667831421,
+          "assignment_score": 3.2131278979603195,
+          "box": [
+            373.0,
+            335.0,
+            390.0,
+            353.0
+          ],
+          "center": [
+            381.5,
+            344.0
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0111",
+          "text": "0",
+          "block_score": 0.9998517036437988,
+          "assignment_score": 2.468731650212214,
+          "box": [
+            371.0,
+            311.0,
+            389.0,
+            332.0
+          ],
+          "center": [
+            380.0,
+            321.5
+          ],
+          "reason": "overlap=0.54,center_near,pattern=0.90"
+        }
+      ],
+      "oil_sign": [
+        {
+          "block_id": "b0143",
+          "text": "小手册",
+          "block_score": 0.7208871841430664,
+          "assignment_score": 1.5655309101300627,
+          "box": [
+            531.0,
+            390.0,
+            565.0,
+            412.0
+          ],
+          "center": [
+            548.0,
+            401.0
+          ],
+          "reason": "overlap=0.19,center_near,pattern=0.60"
         }
       ],
       "fault_flight_no": [],
@@ -4366,32 +4577,29 @@
           "reason": "overlap=0.97,center_near,pattern=1.00"
         }
       ],
-      "fault_reported_by": [],
-      "crew_checkbox": [],
-      "mechanic_checkbox": [],
-      "fault_report_en": [
+      "fault_reported_by": [
         {
-          "block_id": "b0160",
-          "text": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
-          "block_score": 0.888821542263031,
-          "assignment_score": 3.083148281369476,
+          "block_id": "b0140",
+          "text": "重庆",
+          "block_score": 0.9981932640075684,
+          "assignment_score": 2.2864005968306342,
           "box": [
-            73.0,
-            465.0,
-            435.0,
-            502.0
+            235.0,
+            391.0,
+            292.0,
+            422.0
           ],
           "center": [
-            254.0,
-            483.5
+            263.5,
+            406.5
           ],
-          "reason": "overlap=0.97,center_near,pattern=0.80"
+          "reason": "overlap=1.00,center_near"
         },
         {
           "block_id": "b0155",
           "text": "降信息EW: COND AFT CRG ISOL VALVE",
           "block_score": 0.9430546164512634,
-          "assignment_score": 2.8402731421041842,
+          "assignment_score": 1.7459465725467216,
           "box": [
             73.0,
             430.0,
@@ -4402,13 +4610,84 @@
             228.5,
             446.5
           ],
-          "reason": "overlap=1.00,center_near,pattern=0.35"
+          "reason": "overlap=0.25,center_near,pattern=0.60"
+        },
+        {
+          "block_id": "b0131",
+          "text": "19.0",
+          "block_score": 0.9999000430107117,
+          "assignment_score": 1.507344799697709,
+          "box": [
+            294.0,
+            355.0,
+            335.0,
+            380.0
+          ],
+          "center": [
+            314.5,
+            367.5
+          ],
+          "reason": "overlap=0.01,pattern=0.60"
+        },
+        {
+          "block_id": "b0130",
+          "text": "0",
+          "block_score": 0.9910591244697571,
+          "assignment_score": 1.4334984804926596,
+          "box": [
+            235.0,
+            363.0,
+            254.0,
+            380.0
+          ],
+          "center": [
+            244.5,
+            371.5
+          ],
+          "reason": "overlap=0.02,center_near,pattern=0.60"
+        }
+      ],
+      "mechanic_checkbox": [],
+      "fault_description_bilingual": [
+        {
+          "block_id": "b0155",
+          "text": "降信息EW: COND AFT CRG ISOL VALVE",
+          "block_score": 0.9430546164512634,
+          "assignment_score": 3.2256080430980756,
+          "box": [
+            73.0,
+            430.0,
+            384.0,
+            463.0
+          ],
+          "center": [
+            228.5,
+            446.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0160",
+          "text": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
+          "block_score": 0.888821542263031,
+          "assignment_score": 2.9090458303439486,
+          "box": [
+            73.0,
+            465.0,
+            435.0,
+            502.0
+          ],
+          "center": [
+            254.0,
+            483.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.45"
         },
         {
           "block_id": "b0174",
           "text": "航班号",
           "block_score": 0.9999133944511414,
-          "assignment_score": 0.7848775784997708,
+          "assignment_score": 1.9143176955774979,
           "box": [
             58.0,
             540.0,
@@ -4419,30 +4698,30 @@
             76.5,
             547.5
           ],
-          "reason": "center_near"
+          "reason": "overlap=0.38,center_near,pattern=0.45"
         },
         {
-          "block_id": "b0173",
-          "text": "2",
-          "block_score": 0.9999972581863403,
-          "assignment_score": 0.7524843172634517,
+          "block_id": "b0161",
+          "text": "功能号FIN",
+          "block_score": 0.9998762011528015,
+          "assignment_score": 1.5960614521807148,
           "box": [
-            26.0,
-            544.0,
-            38.0,
-            560.0
+            496.0,
+            503.0,
+            550.0,
+            523.0
           ],
           "center": [
-            32.0,
-            552.0
+            523.0,
+            513.0
           ],
-          "reason": "center_near"
+          "reason": "center_near,pattern=0.90"
         },
         {
           "block_id": "b0177",
           "text": "□机组 口机务",
           "block_score": 0.8821545243263245,
-          "assignment_score": 0.6496737495684783,
+          "assignment_score": 1.515957845797547,
           "box": [
             428.0,
             543.0,
@@ -4453,10 +4732,61 @@
             461.5,
             550.5
           ],
-          "reason": "center_near"
+          "reason": "overlap=0.17,center_near,pattern=0.45"
+        },
+        {
+          "block_id": "b0140",
+          "text": "重庆",
+          "block_score": 0.9981932640075684,
+          "assignment_score": 1.4100191555698942,
+          "box": [
+            235.0,
+            391.0,
+            292.0,
+            422.0
+          ],
+          "center": [
+            263.5,
+            406.5
+          ],
+          "reason": "center_near,pattern=0.45"
+        },
+        {
+          "block_id": "b0179",
+          "text": "FLTNO",
+          "block_score": 0.9998449087142944,
+          "assignment_score": 1.3435684060673907,
+          "box": [
+            55.0,
+            551.0,
+            98.0,
+            567.0
+          ],
+          "center": [
+            76.5,
+            559.0
+          ],
+          "reason": "center_near,pattern=0.45"
+        },
+        {
+          "block_id": "b0137",
+          "text": "FLTNO",
+          "block_score": 0.9997849464416504,
+          "assignment_score": 1.34009355810682,
+          "box": [
+            54.0,
+            399.0,
+            94.0,
+            415.0
+          ],
+          "center": [
+            74.0,
+            407.0
+          ],
+          "reason": "center_near,pattern=0.45"
         }
       ],
-      "fault_ref": [
+      "action_ref": [
         {
           "block_id": "b0146",
           "text": "TSM21-28-00-810-802A",
@@ -4509,31 +4839,50 @@
           "reason": "overlap=0.08,pattern=0.85"
         }
       ],
-      "fault_action_station": [],
-      "fault_date": [],
-      "fault_worker_sign": [
+      "action_defer_no": [
         {
-          "block_id": "b0166",
-          "text": "工作者签名SIGN",
-          "block_score": 0.9986956715583801,
-          "assignment_score": 2.99595943597813,
+          "block_id": "b0148",
+          "text": "N/A",
+          "block_score": 0.9228507876396179,
+          "assignment_score": 2.7561986739521775,
           "box": [
-            1017.0,
-            507.0,
-            1099.0,
-            526.0
+            895.0,
+            397.0,
+            939.0,
+            425.0
           ],
           "center": [
-            1058.0,
-            516.5
+            917.0,
+            411.0
           ],
-          "reason": "overlap=1.00,center_near,pattern=0.55"
+          "reason": "overlap=0.72,center_near,pattern=1.00"
+        }
+      ],
+      "action_station": [],
+      "action_date": [],
+      "action_description_bilingual": [
+        {
+          "block_id": "b0164",
+          "text": "安装件号P/N ON",
+          "block_score": 0.9513674974441528,
+          "assignment_score": 3.243347613275366,
+          "box": [
+            795.0,
+            509.0,
+            876.0,
+            523.0
+          ],
+          "center": [
+            835.5,
+            516.0
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
         },
         {
           "block_id": "b0165",
           "text": "安装序号S/N ON",
           "block_score": 0.9820888638496399,
-          "assignment_score": 1.574591961453311,
+          "assignment_score": 3.2210211061878726,
           "box": [
             913.0,
             509.0,
@@ -4544,16 +4893,413 @@
             955.0,
             516.0
           ],
-          "reason": "overlap=0.17,pattern=0.55"
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0163",
+          "text": "拆下序号S/NOFF",
+          "block_score": 0.9795624017715454,
+          "assignment_score": 3.2093499759511963,
+          "box": [
+            675.0,
+            506.0,
+            760.0,
+            520.0
+          ],
+          "center": [
+            717.5,
+            513.0
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0166",
+          "text": "工作者签名SIGN",
+          "block_score": 0.9986956715583801,
+          "assignment_score": 3.1819340334056774,
+          "box": [
+            1017.0,
+            507.0,
+            1099.0,
+            526.0
+          ],
+          "center": [
+            1058.0,
+            516.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0156",
+          "text": "依据TSM完成3A步骤，实成后维轮通风操作测试，测试正常",
+          "block_score": 0.8159302473068237,
+          "assignment_score": 3.1559970116677096,
+          "box": [
+            547.0,
+            429.0,
+            993.0,
+            458.0
+          ],
+          "center": [
+            770.0,
+            443.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0162",
+          "text": "拆下件号P/NOFF",
+          "block_score": 0.9683369398117065,
+          "assignment_score": 3.1534477073007774,
+          "box": [
+            564.0,
+            506.0,
+            648.0,
+            523.0
+          ],
+          "center": [
+            606.0,
+            514.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0161",
+          "text": "功能号FIN",
+          "block_score": 0.9998762011528015,
+          "assignment_score": 3.129677088969471,
+          "box": [
+            496.0,
+            503.0,
+            550.0,
+            523.0
+          ],
+          "center": [
+            523.0,
+            513.0
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.90"
+        },
+        {
+          "block_id": "b0158",
+          "text": "Ref Tsm finish 3A stleps, fimish operatiomal test of the Aft cargo ventilatia, test ok",
+          "block_score": 0.9511660933494568,
+          "assignment_score": 2.9348900748653106,
+          "box": [
+            549.0,
+            453.0,
+            1169.0,
+            492.0
+          ],
+          "center": [
+            859.0,
+            472.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.45"
         }
       ],
-      "fault_authorization": [],
+      "action_removed_part_info": [
+        {
+          "block_id": "b0169",
+          "text": "MA",
+          "block_score": 0.9542967081069946,
+          "assignment_score": 2.3178460567149815,
+          "box": [
+            704.0,
+            520.0,
+            747.0,
+            548.0
+          ],
+          "center": [
+            725.5,
+            534.0
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0168",
+          "text": "~A",
+          "block_score": 0.9166815280914307,
+          "assignment_score": 2.309894556706417,
+          "box": [
+            580.0,
+            520.0,
+            623.0,
+            547.0
+          ],
+          "center": [
+            601.5,
+            533.5
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0162",
+          "text": "拆下件号P/NOFF",
+          "block_score": 0.9683369398117065,
+          "assignment_score": 2.306552796704324,
+          "box": [
+            564.0,
+            506.0,
+            648.0,
+            523.0
+          ],
+          "center": [
+            606.0,
+            514.5
+          ],
+          "reason": "overlap=0.98,center_near"
+        },
+        {
+          "block_id": "b0163",
+          "text": "拆下序号S/NOFF",
+          "block_score": 0.9795624017715454,
+          "assignment_score": 2.3000455123700068,
+          "box": [
+            675.0,
+            506.0,
+            760.0,
+            520.0
+          ],
+          "center": [
+            717.5,
+            513.0
+          ],
+          "reason": "overlap=0.98,center_near"
+        },
+        {
+          "block_id": "b0178",
+          "text": "参考手册",
+          "block_score": 0.9944513440132141,
+          "assignment_score": 2.283561386868537,
+          "box": [
+            511.0,
+            540.0,
+            560.0,
+            563.0
+          ],
+          "center": [
+            535.5,
+            551.5
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0167",
+          "text": "NA",
+          "block_score": 0.9325304627418518,
+          "assignment_score": 2.2485597660127308,
+          "box": [
+            507.0,
+            519.0,
+            547.0,
+            546.0
+          ],
+          "center": [
+            527.0,
+            532.5
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0161",
+          "text": "功能号FIN",
+          "block_score": 0.9998762011528015,
+          "assignment_score": 2.025755656813024,
+          "box": [
+            496.0,
+            503.0,
+            550.0,
+            523.0
+          ],
+          "center": [
+            523.0,
+            513.0
+          ],
+          "reason": "overlap=0.83,center_near"
+        },
+        {
+          "block_id": "b0184",
+          "text": "保留单号",
+          "block_score": 0.9998137950897217,
+          "assignment_score": 1.633197286321865,
+          "box": [
+            808.0,
+            546.0,
+            857.0,
+            561.0
+          ],
+          "center": [
+            832.5,
+            553.5
+          ],
+          "reason": "overlap=0.60,center_near"
+        }
+      ],
+      "action_installed_part_info": [
+        {
+          "block_id": "b0165",
+          "text": "安装序号S/N ON",
+          "block_score": 0.9820888638496399,
+          "assignment_score": 2.3611427919726546,
+          "box": [
+            913.0,
+            509.0,
+            997.0,
+            523.0
+          ],
+          "center": [
+            955.0,
+            516.0
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0184",
+          "text": "保留单号",
+          "block_score": 0.9998137950897217,
+          "assignment_score": 2.280385326867996,
+          "box": [
+            808.0,
+            546.0,
+            857.0,
+            561.0
+          ],
+          "center": [
+            832.5,
+            553.5
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0172",
+          "text": "~A",
+          "block_score": 0.7312498092651367,
+          "assignment_score": 2.261097098936597,
+          "box": [
+            931.0,
+            522.0,
+            976.0,
+            548.0
+          ],
+          "center": [
+            953.5,
+            535.0
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0164",
+          "text": "安装件号P/N ON",
+          "block_score": 0.9513674974441528,
+          "assignment_score": 2.2609036838759806,
+          "box": [
+            795.0,
+            509.0,
+            876.0,
+            523.0
+          ],
+          "center": [
+            835.5,
+            516.0
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0171",
+          "text": "~A",
+          "block_score": 0.8296365141868591,
+          "assignment_score": 2.209112709784717,
+          "box": [
+            815.0,
+            522.0,
+            857.0,
+            548.0
+          ],
+          "center": [
+            836.0,
+            535.0
+          ],
+          "reason": "overlap=1.00,center_near"
+        },
+        {
+          "block_id": "b0166",
+          "text": "工作者签名SIGN",
+          "block_score": 0.9986956715583801,
+          "assignment_score": 1.965518595359644,
+          "box": [
+            1017.0,
+            507.0,
+            1099.0,
+            526.0
+          ],
+          "center": [
+            1058.0,
+            516.5
+          ],
+          "reason": "overlap=0.80,center_near"
+        },
+        {
+          "block_id": "b0187",
+          "text": "DEFER NO",
+          "block_score": 0.9976806044578552,
+          "assignment_score": 1.7304759381685448,
+          "box": [
+            803.0,
+            558.0,
+            861.0,
+            574.0
+          ],
+          "center": [
+            832.0,
+            566.0
+          ],
+          "reason": "overlap=0.64,center_near"
+        }
+      ],
+      "action_release_sign": [
+        {
+          "block_id": "b0166",
+          "text": "工作者签名SIGN",
+          "block_score": 0.9986956715583801,
+          "assignment_score": 3.03095943597813,
+          "box": [
+            1017.0,
+            507.0,
+            1099.0,
+            526.0
+          ],
+          "center": [
+            1058.0,
+            516.5
+          ],
+          "reason": "overlap=1.00,center_near,pattern=0.60"
+        },
+        {
+          "block_id": "b0165",
+          "text": "安装序号S/N ON",
+          "block_score": 0.9820888638496399,
+          "assignment_score": 1.6095919614533112,
+          "box": [
+            913.0,
+            509.0,
+            997.0,
+            523.0
+          ],
+          "center": [
+            955.0,
+            516.0
+          ],
+          "reason": "overlap=0.17,pattern=0.60"
+        }
+      ],
+      "action_authorization": [],
       "apu_cum_hours": [
         {
           "block_id": "b0247",
           "text": "2238",
           "block_score": 0.999990701675415,
-          "assignment_score": 2.255988561916202,
+          "assignment_score": 1.375988561916202,
           "box": [
             322.0,
             911.0,
@@ -4564,7 +5310,7 @@
             354.0,
             929.5
           ],
-          "reason": "overlap=0.38,center_near,pattern=0.90"
+          "reason": "overlap=0.38,center_near"
         }
       ],
       "apu_cum_cycles": [
@@ -4572,7 +5318,7 @@
           "block_id": "b0243",
           "text": "348",
           "block_score": 0.9999914765357971,
-          "assignment_score": 2.2099392541323186,
+          "assignment_score": 1.3299392541323185,
           "box": [
             403.0,
             908.0,
@@ -4583,13 +5329,13 @@
             432.0,
             928.0
           ],
-          "reason": "overlap=0.35,center_near,pattern=0.90"
+          "reason": "overlap=0.35,center_near"
         },
         {
           "block_id": "b0247",
           "text": "2238",
           "block_score": 0.999990701675415,
-          "assignment_score": 1.5528386172118949,
+          "assignment_score": 0.672838617211895,
           "box": [
             322.0,
             911.0,
@@ -4600,49 +5346,15 @@
             354.0,
             929.5
           ],
-          "reason": "overlap=0.01,pattern=0.90"
+          "reason": "overlap=0.01"
         }
       ],
-      "awr_service_completed": [
-        {
-          "block_id": "b0249",
-          "text": " 其他 OTHERS",
-          "block_score": 0.9143369793891907,
-          "assignment_score": 1.354261966562023,
-          "box": [
-            491.0,
-            918.0,
-            584.0,
-            932.0
-          ],
-          "center": [
-            537.5,
-            925.0
-          ],
-          "reason": "overlap=0.35,center_near"
-        },
-        {
-          "block_id": "b0244",
-          "text": "特后前PF&PRE",
-          "block_score": 0.9992151260375977,
-          "assignment_score": 1.2905453383112426,
-          "box": [
-            491.0,
-            903.0,
-            597.0,
-            920.0
-          ],
-          "center": [
-            544.0,
-            911.5
-          ],
-          "reason": "overlap=0.31,center_near"
-        },
+      "awr_post_flt_checkbox": [
         {
           "block_id": "b0241",
           "text": "航后POSTFLT",
           "block_score": 0.9851297736167908,
-          "assignment_score": 1.2678184556311431,
+          "assignment_score": 1.1454682466472392,
           "box": [
             491.0,
             889.0,
@@ -4653,7 +5365,24 @@
             540.5,
             896.5
           ],
-          "reason": "overlap=0.33,center_near"
+          "reason": "overlap=0.23,center_near"
+        },
+        {
+          "block_id": "b0244",
+          "text": "特后前PF&PRE",
+          "block_score": 0.9992151260375977,
+          "assignment_score": 1.1319432445714004,
+          "box": [
+            491.0,
+            903.0,
+            597.0,
+            920.0
+          ],
+          "center": [
+            544.0,
+            911.5
+          ],
+          "reason": "overlap=0.23,center_near"
         }
       ],
       "awr_station": [
@@ -4694,12 +5423,12 @@
           "reason": "overlap=1.00,center_near,pattern=1.00"
         }
       ],
-      "awr_deferred_item": [
+      "awr_deferred_item_checked": [
         {
           "block_id": "b0248",
           "text": "□是YES 否NO",
           "block_score": 0.8677803874015808,
-          "assignment_score": 1.4890705224085563,
+          "assignment_score": 1.3023141329098533,
           "box": [
             848.0,
             904.0,
@@ -4710,13 +5439,13 @@
             904.0,
             914.5
           ],
-          "reason": "overlap=0.52,center_near"
+          "reason": "overlap=0.41,center_near"
         },
         {
           "block_id": "b0250",
           "text": "飞机技术状态满足适航要求，适合飞行，The A/C is considered fit for Release to Service",
           "block_score": 0.9935399889945984,
-          "assignment_score": 1.0902280785435148,
+          "assignment_score": 1.0494863708936866,
           "box": [
             681.0,
             931.0,
@@ -4727,41 +5456,7 @@
             879.0,
             940.0
           ],
-          "reason": "overlap=0.27"
-        },
-        {
-          "block_id": "b0236",
-          "text": "DEFERRED ITEM",
-          "block_score": 0.9736460447311401,
-          "assignment_score": 0.7923938135235742,
-          "box": [
-            857.0,
-            876.0,
-            956.0,
-            890.0
-          ],
-          "center": [
-            906.5,
-            883.0
-          ],
-          "reason": "overlap=0.05,center_near"
-        },
-        {
-          "block_id": "b0237",
-          "text": "RELEASESION",
-          "block_score": 0.9906015396118164,
-          "assignment_score": 0.7172047536225935,
-          "box": [
-            982.0,
-            876.0,
-            1068.0,
-            890.0
-          ],
-          "center": [
-            1025.0,
-            883.0
-          ],
-          "reason": "overlap=0.02,center_near"
+          "reason": "overlap=0.25"
         }
       ],
       "awr_release_sign": [
@@ -4769,7 +5464,7 @@
           "block_id": "b0237",
           "text": "RELEASESION",
           "block_score": 0.9906015396118164,
-          "assignment_score": 2.9620639694808917,
+          "assignment_score": 2.9970639694808914,
           "box": [
             982.0,
             876.0,
@@ -4780,13 +5475,13 @@
             1025.0,
             883.0
           ],
-          "reason": "overlap=1.00,center_near,pattern=0.55"
+          "reason": "overlap=1.00,center_near,pattern=0.60"
         },
         {
           "block_id": "b0250",
           "text": "飞机技术状态满足适航要求，适合飞行，The A/C is considered fit for Release to Service",
           "block_score": 0.9935399889945984,
-          "assignment_score": 1.7438496688756795,
+          "assignment_score": 1.7788496688756794,
           "box": [
             681.0,
             931.0,
@@ -4797,13 +5492,13 @@
             879.0,
             940.0
           ],
-          "reason": "overlap=0.32,pattern=0.55"
+          "reason": "overlap=0.32,pattern=0.60"
         },
         {
           "block_id": "b0248",
           "text": "□是YES 否NO",
           "block_score": 0.8677803874015808,
-          "assignment_score": 1.400487103512622,
+          "assignment_score": 1.4354871035126222,
           "box": [
             848.0,
             904.0,
@@ -4814,124 +5509,118 @@
             904.0,
             914.5
           ],
-          "reason": "overlap=0.10,pattern=0.55"
+          "reason": "overlap=0.10,pattern=0.60"
         }
       ],
       "awr_license": []
     },
     "cleaner_provider": "siliconflow",
-    "cleaner_model": "deepseek-ai/DeepSeek-V4-Flash"
+    "cleaner_model": "deepseek-ai/DeepSeek-V4-Flash",
+    "cache_hit": true,
+    "timings": {
+      "ppocr_submit_ms": 0,
+      "ppocr_poll_ms": 0,
+      "ppocr_download_ms": 0,
+      "ppocr_extract_ms": 0,
+      "ppocr_total_ms": 12,
+      "assignment_ms": 21,
+      "cleaner_ms": 3,
+      "cleaner_total_ms": 3,
+      "cleaner_section_max_ms": 0,
+      "cleaner_section_sum_ms": 0,
+      "cleaner_fallback_count": 0
+    },
+    "cleaner_cache_hit": false,
+    "cleaner_error": "missing_api_key",
+    "cleaner_errors": {},
+    "cleaner_section_meta": {
+      "section_results": {},
+      "section_timings": {},
+      "section_errors": {},
+      "section_cache_hits": {},
+      "section_fallback_cached": {},
+      "fallback_sections": []
+    }
   },
   "fields": [
     {
-      "id": "oil_last_row_added",
-      "label": "滑油最后一排-加注量",
+      "id": "ac_reg_digits",
+      "label": "01 注册号",
+      "section": "header",
+      "bbox": [
+        480,
+        55,
+        250,
+        90
+      ],
+      "recognizer": "keyed_text",
+      "validator": "digit_length",
+      "value": "",
+      "normalized_value": "",
+      "confidence": 0.0,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR+ROI复核",
+      "raw": {
+        "candidates": [],
+        "roi_review": {
+          "roi_url": "/runs/local_29_rule_smoke/roi_reviews/ac_reg_digits.png",
+          "value": "",
+          "normalized_value": "",
+          "confidence": 0.0,
+          "provider": "roi-vlm:mock",
+          "model": "mock",
+          "passed": false,
+          "message": "注册号不是4位数字",
+          "raw": {
+            "roi_review": {
+              "roi_url": "/runs/local_29_rule_smoke/roi_reviews/ac_reg_digits.png",
+              "previous": {
+                "value": "",
+                "normalized_value": "",
+                "confidence": 0.0,
+                "provider": "siliconflow:fallback_cleaner",
+                "model": "deepseek-ai/DeepSeek-V4-Flash",
+                "needs_review": true,
+                "review_reason": "需人工复核"
+              },
+              "result": null
+            }
+          },
+          "duration_ms": 3
+        }
+      },
+      "needs_review": true,
+      "review_reason": "需人工复核",
+      "passed": false,
+      "message": "注册号不是4位数字",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/ac_reg_digits.png"
+    },
+    {
+      "id": "oil_eng1_added",
+      "label": "02 发动机1加注量",
       "section": "oil",
       "bbox": [
-        125,
+        120,
         635,
-        520,
+        120,
         58
       ],
       "recognizer": "numeric_text",
       "validator": "int_range",
       "value": "0",
       "normalized_value": "0",
-      "confidence": 0.9994,
-      "provider": "siliconflow",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
-          {
-            "block_id": "b0107",
-            "text": "0",
-            "block_score": 0.9994138479232788,
-            "assignment_score": 3.270535271156457,
-            "box": [
-              100.0,
-              311.0,
-              118.0,
-              332.0
-            ],
-            "center": [
-              109.0,
-              321.5
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0096",
-            "text": "0",
-            "block_score": 0.9907779693603516,
-            "assignment_score": 3.2561445594027965,
-            "box": [
-              99.0,
-              291.0,
-              118.0,
-              309.0
-            ],
-            "center": [
-              108.5,
-              300.0
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0117",
-            "text": "0",
-            "block_score": 0.9994937181472778,
-            "assignment_score": 3.240997428679514,
-            "box": [
-              102.0,
-              335.0,
-              121.0,
-              354.0
-            ],
-            "center": [
-              111.5,
-              344.5
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0085",
-            "text": "0",
-            "block_score": 0.9998050332069397,
-            "assignment_score": 3.2306909827696644,
-            "box": [
-              98.0,
-              267.0,
-              116.0,
-              287.0
-            ],
-            "center": [
-              107.0,
-              277.0
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
           {
             "block_id": "b0129",
             "text": "0",
             "block_score": 0.9992024302482605,
-            "assignment_score": 3.2136853083718364,
+            "assignment_score": 3.212802547144275,
             "box": [
               98.0,
               357.0,
@@ -4945,10 +5634,44 @@
             "reason": "overlap=1.00,center_near,pattern=0.90"
           },
           {
+            "block_id": "b0117",
+            "text": "0",
+            "block_score": 0.9994937181472778,
+            "assignment_score": 3.195686503704885,
+            "box": [
+              102.0,
+              335.0,
+              121.0,
+              354.0
+            ],
+            "center": [
+              111.5,
+              344.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0107",
+            "text": "0",
+            "block_score": 0.9994138479232788,
+            "assignment_score": 2.4633759460749194,
+            "box": [
+              100.0,
+              311.0,
+              118.0,
+              332.0
+            ],
+            "center": [
+              109.0,
+              321.5
+            ],
+            "reason": "overlap=0.54,center_near,pattern=0.90"
+          },
+          {
             "block_id": "b0106",
             "text": "3",
             "block_score": 0.9999939203262329,
-            "assignment_score": 3.204117301765669,
+            "assignment_score": 1.9994370956600211,
             "box": [
               41.0,
               311.0,
@@ -4959,164 +5682,41 @@
               47.5,
               318.5
             ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0095",
-            "text": "2",
-            "block_score": 0.9999886751174927,
-            "assignment_score": 3.204017476429422,
-            "box": [
-              44.0,
-              290.0,
-              56.0,
-              305.0
-            ],
-            "center": [
-              50.0,
-              297.5
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0084",
-            "text": "1",
-            "block_score": 0.998521625995636,
-            "assignment_score": 3.1907501167749315,
-            "box": [
-              45.0,
-              267.0,
-              56.0,
-              283.0
-            ],
-            "center": [
-              50.5,
-              275.0
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
+            "reason": "overlap=0.26,center_near,pattern=0.90"
           }
-        ],
-        "needs_review": false,
-        "reason": "最高分候选",
-        "evidence_block_ids": [
-          "b0107"
         ]
       },
       "needs_review": false,
-      "review_reason": "最高分候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/oil_last_row_added.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/oil_eng1_added.png"
     },
     {
-      "id": "oil_qty",
-      "label": "滑油最后一排-滑油量",
+      "id": "oil_eng1_qty",
+      "label": "03 发动机1滑油量",
       "section": "oil",
       "bbox": [
-        245,
+        240,
         635,
-        395,
+        155,
         58
       ],
       "recognizer": "numeric_text",
       "validator": "int_range",
       "value": "19.5",
       "normalized_value": "19.5",
-      "confidence": 0.9987,
-      "provider": "siliconflow",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
-          {
-            "block_id": "b0108",
-            "text": "19.5",
-            "block_score": 0.9987013339996338,
-            "assignment_score": 3.258454863347468,
-            "box": [
-              161.0,
-              312.0,
-              204.0,
-              335.0
-            ],
-            "center": [
-              182.5,
-              323.5
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0097",
-            "text": "19.5",
-            "block_score": 0.9996286630630493,
-            "assignment_score": 3.251632980082182,
-            "box": [
-              161.0,
-              291.0,
-              202.0,
-              314.0
-            ],
-            "center": [
-              181.5,
-              302.5
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0118",
-            "text": "19.5",
-            "block_score": 0.9927990436553955,
-            "assignment_score": 3.2163622464202044,
-            "box": [
-              160.0,
-              332.0,
-              199.0,
-              359.0
-            ],
-            "center": [
-              179.5,
-              345.5
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
-          {
-            "block_id": "b0086",
-            "text": "17.5",
-            "block_score": 0.998911440372467,
-            "assignment_score": 3.2101918260999884,
-            "box": [
-              157.0,
-              270.0,
-              194.0,
-              292.0
-            ],
-            "center": [
-              175.5,
-              281.0
-            ],
-            "reason": "overlap=1.00,center_near,pattern=0.90"
-          },
           {
             "block_id": "b0127",
             "text": "19.5",
             "block_score": 0.9998214244842529,
-            "assignment_score": 3.1762021598103134,
+            "assignment_score": 3.2486321194385104,
             "box": [
               155.0,
               355.0,
@@ -5130,27 +5730,123 @@
             "reason": "overlap=1.00,center_near,pattern=0.90"
           },
           {
-            "block_id": "b0087",
-            "text": "0",
-            "block_score": 0.9790927171707153,
-            "assignment_score": 2.257206016258261,
+            "block_id": "b0118",
+            "text": "19.5",
+            "block_score": 0.9927990436553955,
+            "assignment_score": 3.240829977260763,
             "box": [
-              232.0,
-              276.0,
-              252.0,
-              294.0
+              160.0,
+              332.0,
+              199.0,
+              359.0
             ],
             "center": [
-              242.0,
-              285.0
+              179.5,
+              345.5
             ],
-            "reason": "overlap=0.40,center_near,pattern=0.90"
+            "reason": "overlap=1.00,center_near,pattern=0.90"
           },
+          {
+            "block_id": "b0108",
+            "text": "19.5",
+            "block_score": 0.9987013339996338,
+            "assignment_score": 2.6208649917583653,
+            "box": [
+              161.0,
+              312.0,
+              204.0,
+              335.0
+            ],
+            "center": [
+              182.5,
+              323.5
+            ],
+            "reason": "overlap=0.62,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0117",
+            "text": "0",
+            "block_score": 0.9994937181472778,
+            "assignment_score": 1.6112503868323564,
+            "box": [
+              102.0,
+              335.0,
+              121.0,
+              354.0
+            ],
+            "center": [
+              111.5,
+              344.5
+            ],
+            "reason": "center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0129",
+            "text": "0",
+            "block_score": 0.9992024302482605,
+            "assignment_score": 1.6009822123454756,
+            "box": [
+              98.0,
+              357.0,
+              116.0,
+              375.0
+            ],
+            "center": [
+              107.0,
+              366.0
+            ],
+            "reason": "center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0107",
+            "text": "0",
+            "block_score": 0.9994138479232788,
+            "assignment_score": 1.58307436179325,
+            "box": [
+              100.0,
+              311.0,
+              118.0,
+              332.0
+            ],
+            "center": [
+              109.0,
+              321.5
+            ],
+            "reason": "center_near,pattern=0.90"
+          }
+        ]
+      },
+      "needs_review": false,
+      "review_reason": "",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/oil_eng1_qty.png"
+    },
+    {
+      "id": "oil_eng2_added",
+      "label": "04 发动机2加注量",
+      "section": "oil",
+      "bbox": [
+        395,
+        635,
+        120,
+        58
+      ],
+      "recognizer": "numeric_text",
+      "validator": "int_range",
+      "value": "0",
+      "normalized_value": "0",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
           {
             "block_id": "b0130",
             "text": "0",
             "block_score": 0.9910591244697571,
-            "assignment_score": 2.022771450680189,
+            "assignment_score": 3.2316217524778192,
             "box": [
               235.0,
               363.0,
@@ -5161,41 +5857,341 @@
               244.5,
               371.5
             ],
-            "reason": "overlap=0.26,center_near,pattern=0.90"
+            "reason": "overlap=1.00,center_near,pattern=0.90"
           },
           {
-            "block_id": "b0098",
+            "block_id": "b0119",
             "text": "0",
-            "block_score": 0.9261118173599243,
-            "assignment_score": 1.7186915101272149,
+            "block_score": 0.8228945136070251,
+            "assignment_score": 3.163648504133337,
             "box": [
               239.0,
-              295.0,
-              257.0,
-              314.0
+              336.0,
+              258.0,
+              354.0
             ],
             "center": [
-              248.0,
-              304.5
+              248.5,
+              345.0
             ],
-            "reason": "overlap=0.06,center_near,pattern=0.90"
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0109",
+            "text": "0",
+            "block_score": 0.99949049949646,
+            "assignment_score": 2.7588164160189197,
+            "box": [
+              241.0,
+              315.0,
+              258.0,
+              335.0
+            ],
+            "center": [
+              249.5,
+              325.0
+            ],
+            "reason": "overlap=0.72,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0120",
+            "text": "18.5",
+            "block_score": 0.999800443649292,
+            "assignment_score": 1.631283497869687,
+            "box": [
+              289.0,
+              333.0,
+              333.0,
+              360.0
+            ],
+            "center": [
+              311.0,
+              346.5
+            ],
+            "reason": "overlap=0.03,pattern=0.90"
+          },
+          {
+            "block_id": "b0110",
+            "text": "19.5",
+            "block_score": 0.9968204498291016,
+            "assignment_score": 1.5733945455947136,
+            "box": [
+              290.0,
+              311.0,
+              331.0,
+              338.0
+            ],
+            "center": [
+              310.5,
+              324.5
+            ],
+            "reason": "overlap=0.00,pattern=0.90"
           }
-        ],
-        "needs_review": false,
-        "reason": "最高分候选",
-        "evidence_block_ids": [
-          "b0108"
         ]
       },
       "needs_review": false,
-      "review_reason": "最高分候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/oil_qty.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/oil_eng2_added.png"
+    },
+    {
+      "id": "oil_eng2_qty",
+      "label": "05 发动机2滑油量",
+      "section": "oil",
+      "bbox": [
+        515,
+        635,
+        155,
+        58
+      ],
+      "recognizer": "numeric_text",
+      "validator": "int_range",
+      "value": "19.0",
+      "normalized_value": "19.0",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0131",
+            "text": "19.0",
+            "block_score": 0.9999000430107117,
+            "assignment_score": 3.2316245881370005,
+            "box": [
+              294.0,
+              355.0,
+              335.0,
+              380.0
+            ],
+            "center": [
+              314.5,
+              367.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0120",
+            "text": "18.5",
+            "block_score": 0.999800443649292,
+            "assignment_score": 3.2230172551390592,
+            "box": [
+              289.0,
+              333.0,
+              333.0,
+              360.0
+            ],
+            "center": [
+              311.0,
+              346.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0110",
+            "text": "19.5",
+            "block_score": 0.9968204498291016,
+            "assignment_score": 2.640839378017845,
+            "box": [
+              290.0,
+              311.0,
+              331.0,
+              338.0
+            ],
+            "center": [
+              310.5,
+              324.5
+            ],
+            "reason": "overlap=0.64,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0121",
+            "text": "0",
+            "block_score": 0.9979003667831421,
+            "assignment_score": 2.2108388500110627,
+            "box": [
+              373.0,
+              335.0,
+              390.0,
+              353.0
+            ],
+            "center": [
+              381.5,
+              344.0
+            ],
+            "reason": "overlap=0.38,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0132",
+            "text": "0",
+            "block_score": 0.99250727891922,
+            "assignment_score": 2.0845937186195207,
+            "box": [
+              375.0,
+              360.0,
+              390.0,
+              374.0
+            ],
+            "center": [
+              382.5,
+              367.0
+            ],
+            "reason": "overlap=0.30,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0111",
+            "text": "0",
+            "block_score": 0.9998517036437988,
+            "assignment_score": 1.9975430632763378,
+            "box": [
+              371.0,
+              311.0,
+              389.0,
+              332.0
+            ],
+            "center": [
+              380.0,
+              321.5
+            ],
+            "reason": "overlap=0.26,center_near,pattern=0.90"
+          }
+        ]
+      },
+      "needs_review": false,
+      "review_reason": "",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/oil_eng2_qty.png"
+    },
+    {
+      "id": "oil_apu_added",
+      "label": "06 APU加注量",
+      "section": "oil",
+      "bbox": [
+        670,
+        635,
+        120,
+        58
+      ],
+      "recognizer": "numeric_text",
+      "validator": "int_range",
+      "value": "0",
+      "normalized_value": "0",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0132",
+            "text": "0",
+            "block_score": 0.99250727891922,
+            "assignment_score": 3.2189495701979993,
+            "box": [
+              375.0,
+              360.0,
+              390.0,
+              374.0
+            ],
+            "center": [
+              382.5,
+              367.0
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0121",
+            "text": "0",
+            "block_score": 0.9979003667831421,
+            "assignment_score": 3.2131278979603195,
+            "box": [
+              373.0,
+              335.0,
+              390.0,
+              353.0
+            ],
+            "center": [
+              381.5,
+              344.0
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0111",
+            "text": "0",
+            "block_score": 0.9998517036437988,
+            "assignment_score": 2.468731650212214,
+            "box": [
+              371.0,
+              311.0,
+              389.0,
+              332.0
+            ],
+            "center": [
+              380.0,
+              321.5
+            ],
+            "reason": "overlap=0.54,center_near,pattern=0.90"
+          }
+        ]
+      },
+      "needs_review": false,
+      "review_reason": "",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/oil_apu_added.png"
+    },
+    {
+      "id": "oil_sign",
+      "label": "07 滑油签名",
+      "section": "oil",
+      "bbox": [
+        790,
+        595,
+        190,
+        105
+      ],
+      "recognizer": "signature_or_text",
+      "validator": "name_not_place",
+      "value": "小手册",
+      "normalized_value": "小手册",
+      "confidence": 0.5218436367100209,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0143",
+            "text": "小手册",
+            "block_score": 0.7208871841430664,
+            "assignment_score": 1.5655309101300627,
+            "box": [
+              531.0,
+              390.0,
+              565.0,
+              412.0
+            ],
+            "center": [
+              548.0,
+              401.0
+            ],
+            "reason": "overlap=0.19,center_near,pattern=0.60"
+          }
+        ]
+      },
+      "needs_review": true,
+      "review_reason": "需人工复核",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/oil_sign.png"
     },
     {
       "id": "fault_flight_no",
-      "label": "故障报告-航班号",
+      "label": "08 故障报告-航班号",
       "section": "fault_action",
       "bbox": [
         28,
@@ -5208,40 +6204,21 @@
       "value": "",
       "normalized_value": "",
       "confidence": 0.0,
-      "provider": "siliconflow",
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
-        "candidates": [],
-        "needs_review": true,
-        "reason": "无候选",
-        "evidence_block_ids": []
+        "candidates": []
       },
       "needs_review": true,
-      "review_reason": "无候选",
+      "review_reason": "需人工复核",
       "passed": false,
       "message": "航班号不是N/A",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_flight_no.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/fault_flight_no.png"
     },
     {
       "id": "fault_station",
-      "label": "故障报告-地点",
+      "label": "09 故障报告-地点",
       "section": "fault_action",
       "bbox": [
         198,
@@ -5253,27 +6230,11 @@
       "validator": "exact_text",
       "value": "重庆",
       "normalized_value": "重庆",
-      "confidence": 0.9982,
-      "provider": "siliconflow",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
             "block_id": "b0140",
@@ -5292,22 +6253,17 @@
             ],
             "reason": "overlap=0.97,center_near,pattern=1.00"
           }
-        ],
-        "needs_review": false,
-        "reason": "唯一候选",
-        "evidence_block_ids": [
-          "b0140"
         ]
       },
       "needs_review": false,
-      "review_reason": "唯一候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_station.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/fault_station.png"
     },
     {
       "id": "fault_reported_by",
-      "label": "故障报告-报告人",
+      "label": "10 故障报告-报告人",
       "section": "fault_action",
       "bbox": [
         503,
@@ -5315,72 +6271,121 @@
         265,
         56
       ],
-      "recognizer": "keyed_text",
-      "validator": "exact_text",
-      "value": "",
-      "normalized_value": "",
-      "confidence": 0.0,
-      "provider": "siliconflow",
+      "recognizer": "signature_or_text",
+      "validator": "name_not_place",
+      "value": "重庆",
+      "normalized_value": "重庆",
+      "confidence": 0.7621335322768781,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR+ROI复核",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
+        "candidates": [
+          {
+            "block_id": "b0140",
+            "text": "重庆",
+            "block_score": 0.9981932640075684,
+            "assignment_score": 2.2864005968306342,
+            "box": [
+              235.0,
+              391.0,
+              292.0,
+              422.0
+            ],
+            "center": [
+              263.5,
+              406.5
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0155",
+            "text": "降信息EW: COND AFT CRG ISOL VALVE",
+            "block_score": 0.9430546164512634,
+            "assignment_score": 1.7459465725467216,
+            "box": [
+              73.0,
+              430.0,
+              384.0,
+              463.0
+            ],
+            "center": [
+              228.5,
+              446.5
+            ],
+            "reason": "overlap=0.25,center_near,pattern=0.60"
+          },
+          {
+            "block_id": "b0131",
+            "text": "19.0",
+            "block_score": 0.9999000430107117,
+            "assignment_score": 1.507344799697709,
+            "box": [
+              294.0,
+              355.0,
+              335.0,
+              380.0
+            ],
+            "center": [
+              314.5,
+              367.5
+            ],
+            "reason": "overlap=0.01,pattern=0.60"
+          },
+          {
+            "block_id": "b0130",
+            "text": "0",
+            "block_score": 0.9910591244697571,
+            "assignment_score": 1.4334984804926596,
+            "box": [
+              235.0,
+              363.0,
+              254.0,
+              380.0
+            ],
+            "center": [
+              244.5,
+              371.5
+            ],
+            "reason": "overlap=0.02,center_near,pattern=0.60"
           }
-        },
-        "candidates": [],
-        "needs_review": true,
-        "reason": "无候选",
-        "evidence_block_ids": []
+        ],
+        "roi_review": {
+          "roi_url": "/runs/local_29_rule_smoke/roi_reviews/fault_reported_by.png",
+          "value": "",
+          "normalized_value": "",
+          "confidence": 0.0,
+          "provider": "roi-vlm:mock",
+          "model": "mock",
+          "passed": false,
+          "message": "报告人不是姓名",
+          "raw": {
+            "roi_review": {
+              "roi_url": "/runs/local_29_rule_smoke/roi_reviews/fault_reported_by.png",
+              "previous": {
+                "value": "重庆",
+                "normalized_value": "重庆",
+                "confidence": 0.7621335322768781,
+                "provider": "siliconflow:fallback_cleaner",
+                "model": "deepseek-ai/DeepSeek-V4-Flash",
+                "needs_review": true,
+                "review_reason": "需人工复核"
+              },
+              "result": null
+            }
+          },
+          "duration_ms": 2
+        }
       },
       "needs_review": true,
-      "review_reason": "无候选",
+      "review_reason": "需人工复核",
       "passed": false,
-      "message": "报告人不是张三",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_reported_by.png"
-    },
-    {
-      "id": "crew_checkbox",
-      "label": "故障报告-机组",
-      "section": "fault_action",
-      "bbox": [
-        772,
-        724,
-        34,
-        34
-      ],
-      "recognizer": "checkbox",
-      "validator": "checked",
-      "value": "checked",
-      "normalized_value": "checked",
-      "confidence": 0.7201646090534979,
-      "provider": "vision-rule",
-      "model": "dark-pixel-density",
-      "source_label": "Checkbox",
-      "raw": {
-        "dark_density": 0.08641975308641975
-      },
-      "needs_review": false,
-      "review_reason": "",
-      "passed": true,
-      "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/crew_checkbox.png"
+      "message": "报告人不是姓名",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/fault_reported_by.png"
     },
     {
       "id": "mechanic_checkbox",
-      "label": "故障报告-机务",
+      "label": "11 故障报告-机务",
       "section": "fault_action",
       "bbox": [
         838,
@@ -5392,22 +6397,22 @@
       "validator": "checked",
       "value": "checked",
       "normalized_value": "checked",
-      "confidence": 0.9830818472793782,
+      "confidence": 1.0,
       "provider": "vision-rule",
       "model": "dark-pixel-density",
       "source_label": "Checkbox",
       "raw": {
-        "dark_density": 0.11796982167352538
+        "dark_density": 0.6008230452674898
       },
       "needs_review": false,
       "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/mechanic_checkbox.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/mechanic_checkbox.png"
     },
     {
-      "id": "fault_report_en",
-      "label": "故障报告-英文内容",
+      "id": "fault_description_bilingual",
+      "label": "12 故障报告-中英文内容",
       "section": "fault_action",
       "bbox": [
         28,
@@ -5416,53 +6421,20 @@
         155
       ],
       "recognizer": "free_text",
-      "validator": "english_text",
-      "value": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
-      "normalized_value": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
-      "confidence": 0.8888,
-      "provider": "siliconflow",
+      "validator": "bilingual_text",
+      "value": "降信息EW: COND AFT CRG ISOL VALVE FaultmesSge:E/W. COND AFT CRG ISOLVALVE 航班号 功能号FIN □机组 口机务 重庆",
+      "normalized_value": "降信息EW: COND AFT CRG ISOL VALVE FaultmesSge:E/W. COND AFT CRG ISOLVALVE 航班号 功能号FIN □机组 口机务 重庆",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
-          {
-            "block_id": "b0160",
-            "text": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
-            "block_score": 0.888821542263031,
-            "assignment_score": 3.083148281369476,
-            "box": [
-              73.0,
-              465.0,
-              435.0,
-              502.0
-            ],
-            "center": [
-              254.0,
-              483.5
-            ],
-            "reason": "overlap=0.97,center_near,pattern=0.80"
-          },
           {
             "block_id": "b0155",
             "text": "降信息EW: COND AFT CRG ISOL VALVE",
             "block_score": 0.9430546164512634,
-            "assignment_score": 2.8402731421041842,
+            "assignment_score": 3.2256080430980756,
             "box": [
               73.0,
               430.0,
@@ -5473,13 +6445,30 @@
               228.5,
               446.5
             ],
-            "reason": "overlap=1.00,center_near,pattern=0.35"
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0160",
+            "text": "FaultmesSge:E/W. COND AFT CRG ISOLVALVE",
+            "block_score": 0.888821542263031,
+            "assignment_score": 2.9090458303439486,
+            "box": [
+              73.0,
+              465.0,
+              435.0,
+              502.0
+            ],
+            "center": [
+              254.0,
+              483.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.45"
           },
           {
             "block_id": "b0174",
             "text": "航班号",
             "block_score": 0.9999133944511414,
-            "assignment_score": 0.7848775784997708,
+            "assignment_score": 1.9143176955774979,
             "box": [
               58.0,
               540.0,
@@ -5490,30 +6479,30 @@
               76.5,
               547.5
             ],
-            "reason": "center_near"
+            "reason": "overlap=0.38,center_near,pattern=0.45"
           },
           {
-            "block_id": "b0173",
-            "text": "2",
-            "block_score": 0.9999972581863403,
-            "assignment_score": 0.7524843172634517,
+            "block_id": "b0161",
+            "text": "功能号FIN",
+            "block_score": 0.9998762011528015,
+            "assignment_score": 1.5960614521807148,
             "box": [
-              26.0,
-              544.0,
-              38.0,
-              560.0
+              496.0,
+              503.0,
+              550.0,
+              523.0
             ],
             "center": [
-              32.0,
-              552.0
+              523.0,
+              513.0
             ],
-            "reason": "center_near"
+            "reason": "center_near,pattern=0.90"
           },
           {
             "block_id": "b0177",
             "text": "□机组 口机务",
             "block_score": 0.8821545243263245,
-            "assignment_score": 0.6496737495684783,
+            "assignment_score": 1.515957845797547,
             "box": [
               428.0,
               543.0,
@@ -5524,24 +6513,70 @@
               461.5,
               550.5
             ],
-            "reason": "center_near"
+            "reason": "overlap=0.17,center_near,pattern=0.45"
+          },
+          {
+            "block_id": "b0140",
+            "text": "重庆",
+            "block_score": 0.9981932640075684,
+            "assignment_score": 1.4100191555698942,
+            "box": [
+              235.0,
+              391.0,
+              292.0,
+              422.0
+            ],
+            "center": [
+              263.5,
+              406.5
+            ],
+            "reason": "center_near,pattern=0.45"
+          },
+          {
+            "block_id": "b0179",
+            "text": "FLTNO",
+            "block_score": 0.9998449087142944,
+            "assignment_score": 1.3435684060673907,
+            "box": [
+              55.0,
+              551.0,
+              98.0,
+              567.0
+            ],
+            "center": [
+              76.5,
+              559.0
+            ],
+            "reason": "center_near,pattern=0.45"
+          },
+          {
+            "block_id": "b0137",
+            "text": "FLTNO",
+            "block_score": 0.9997849464416504,
+            "assignment_score": 1.34009355810682,
+            "box": [
+              54.0,
+              399.0,
+              94.0,
+              415.0
+            ],
+            "center": [
+              74.0,
+              407.0
+            ],
+            "reason": "center_near,pattern=0.45"
           }
-        ],
-        "needs_review": false,
-        "reason": "最高分英文候选",
-        "evidence_block_ids": [
-          "b0160"
         ]
       },
       "needs_review": false,
-      "review_reason": "最高分英文候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_report_en.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/fault_description_bilingual.png"
     },
     {
-      "id": "fault_ref",
-      "label": "处理措施-参考手册",
+      "id": "action_ref",
+      "label": "13 处理措施-参考手册",
       "section": "fault_action",
       "bbox": [
         900,
@@ -5553,27 +6588,11 @@
       "validator": "prefix_or_exact",
       "value": "TSM21-28-00-810-802A",
       "normalized_value": "TSM21-28-00-810-802A",
-      "confidence": 0.8748,
-      "provider": "siliconflow",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
             "block_id": "b0146",
@@ -5626,22 +6645,62 @@
             ],
             "reason": "overlap=0.08,pattern=0.85"
           }
-        ],
-        "needs_review": false,
-        "reason": "唯一手册编号候选",
-        "evidence_block_ids": [
-          "b0146"
         ]
       },
       "needs_review": false,
-      "review_reason": "唯一手册编号候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_ref.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_ref.png"
     },
     {
-      "id": "fault_action_station",
-      "label": "处理措施-地点",
+      "id": "action_defer_no",
+      "label": "14 处理措施-保留单号",
+      "section": "fault_action",
+      "bbox": [
+        1420,
+        720,
+        210,
+        56
+      ],
+      "recognizer": "keyed_text",
+      "validator": "exact_text",
+      "value": "N/A",
+      "normalized_value": "N/A",
+      "confidence": 0.9187328913173926,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0148",
+            "text": "N/A",
+            "block_score": 0.9228507876396179,
+            "assignment_score": 2.7561986739521775,
+            "box": [
+              895.0,
+              397.0,
+              939.0,
+              425.0
+            ],
+            "center": [
+              917.0,
+              411.0
+            ],
+            "reason": "overlap=0.72,center_near,pattern=1.00"
+          }
+        ]
+      },
+      "needs_review": false,
+      "review_reason": "",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_defer_no.png"
+    },
+    {
+      "id": "action_station",
+      "label": "15 处理措施-地点",
       "section": "fault_action",
       "bbox": [
         1740,
@@ -5654,40 +6713,21 @@
       "value": "",
       "normalized_value": "",
       "confidence": 0.0,
-      "provider": "siliconflow",
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
-        "candidates": [],
-        "needs_review": true,
-        "reason": "无候选",
-        "evidence_block_ids": []
+        "candidates": []
       },
       "needs_review": true,
-      "review_reason": "无候选",
+      "review_reason": "需人工复核",
       "passed": false,
       "message": "处理地点不是重庆",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_action_station.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_station.png"
     },
     {
-      "id": "fault_date",
-      "label": "处理措施-日期",
+      "id": "action_date",
+      "label": "16 处理措施-日期",
       "section": "fault_action",
       "bbox": [
         1930,
@@ -5700,95 +6740,60 @@
       "value": "",
       "normalized_value": "",
       "confidence": 0.0,
-      "provider": "siliconflow",
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
-        "candidates": [],
-        "needs_review": true,
-        "reason": "无候选",
-        "evidence_block_ids": []
+        "candidates": []
       },
       "needs_review": true,
-      "review_reason": "无候选",
+      "review_reason": "需人工复核",
       "passed": false,
-      "message": "日期不是今天",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_date.png"
+      "message": "处理日期不是今天",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_date.png"
     },
     {
-      "id": "fault_worker_sign",
-      "label": "处理措施-工作者签名",
+      "id": "action_description_bilingual",
+      "label": "17 处理措施-中英文内容",
       "section": "fault_action",
       "bbox": [
-        1865,
-        910,
-        175,
-        58
+        900,
+        775,
+        1260,
+        145
       ],
-      "recognizer": "signature_or_text",
-      "validator": "exact_text_or_ocr_match",
-      "value": "",
-      "normalized_value": "",
-      "confidence": 0.0,
-      "provider": "siliconflow",
+      "recognizer": "free_text",
+      "validator": "bilingual_text",
+      "value": "安装件号P/N ON 安装序号S/N ON 拆下序号S/NOFF 工作者签名SIGN 依据TSM完成3A步骤，实成后维轮通风操作测试，测试正常 拆下件号P/NOFF",
+      "normalized_value": "安装件号P/N ON 安装序号S/N ON 拆下序号S/NOFF 工作者签名SIGN 依据TSM完成3A步骤，实成后维轮通风操作测试，测试正常 拆下件号P/NOFF",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
-            "block_id": "b0166",
-            "text": "工作者签名SIGN",
-            "block_score": 0.9986956715583801,
-            "assignment_score": 2.99595943597813,
+            "block_id": "b0164",
+            "text": "安装件号P/N ON",
+            "block_score": 0.9513674974441528,
+            "assignment_score": 3.243347613275366,
             "box": [
-              1017.0,
-              507.0,
-              1099.0,
-              526.0
+              795.0,
+              509.0,
+              876.0,
+              523.0
             ],
             "center": [
-              1058.0,
-              516.5
+              835.5,
+              516.0
             ],
-            "reason": "overlap=1.00,center_near,pattern=0.55"
+            "reason": "overlap=1.00,center_near,pattern=0.90"
           },
           {
             "block_id": "b0165",
             "text": "安装序号S/N ON",
             "block_score": 0.9820888638496399,
-            "assignment_score": 1.574591961453311,
+            "assignment_score": 3.2210211061878726,
             "box": [
               913.0,
               509.0,
@@ -5799,22 +6804,494 @@
               955.0,
               516.0
             ],
-            "reason": "overlap=0.17,pattern=0.55"
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0163",
+            "text": "拆下序号S/NOFF",
+            "block_score": 0.9795624017715454,
+            "assignment_score": 3.2093499759511963,
+            "box": [
+              675.0,
+              506.0,
+              760.0,
+              520.0
+            ],
+            "center": [
+              717.5,
+              513.0
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0166",
+            "text": "工作者签名SIGN",
+            "block_score": 0.9986956715583801,
+            "assignment_score": 3.1819340334056774,
+            "box": [
+              1017.0,
+              507.0,
+              1099.0,
+              526.0
+            ],
+            "center": [
+              1058.0,
+              516.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0156",
+            "text": "依据TSM完成3A步骤，实成后维轮通风操作测试，测试正常",
+            "block_score": 0.8159302473068237,
+            "assignment_score": 3.1559970116677096,
+            "box": [
+              547.0,
+              429.0,
+              993.0,
+              458.0
+            ],
+            "center": [
+              770.0,
+              443.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0162",
+            "text": "拆下件号P/NOFF",
+            "block_score": 0.9683369398117065,
+            "assignment_score": 3.1534477073007774,
+            "box": [
+              564.0,
+              506.0,
+              648.0,
+              523.0
+            ],
+            "center": [
+              606.0,
+              514.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0161",
+            "text": "功能号FIN",
+            "block_score": 0.9998762011528015,
+            "assignment_score": 3.129677088969471,
+            "box": [
+              496.0,
+              503.0,
+              550.0,
+              523.0
+            ],
+            "center": [
+              523.0,
+              513.0
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.90"
+          },
+          {
+            "block_id": "b0158",
+            "text": "Ref Tsm finish 3A stleps, fimish operatiomal test of the Aft cargo ventilatia, test ok",
+            "block_score": 0.9511660933494568,
+            "assignment_score": 2.9348900748653106,
+            "box": [
+              549.0,
+              453.0,
+              1169.0,
+              492.0
+            ],
+            "center": [
+              859.0,
+              472.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.45"
           }
-        ],
-        "needs_review": true,
-        "reason": "无有效签名候选",
-        "evidence_block_ids": []
+        ]
       },
-      "needs_review": true,
-      "review_reason": "无有效签名候选",
-      "passed": false,
-      "message": "工作者签名不是张三",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_worker_sign.png"
+      "needs_review": false,
+      "review_reason": "",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_description_bilingual.png"
     },
     {
-      "id": "fault_authorization",
-      "label": "处理措施-授权号",
+      "id": "action_removed_part_info",
+      "label": "18 拆下件信息",
+      "section": "fault_action",
+      "bbox": [
+        900,
+        925,
+        560,
+        70
+      ],
+      "recognizer": "keyed_text",
+      "validator": "present",
+      "value": "MA",
+      "normalized_value": "MA",
+      "confidence": 0.7726153522383271,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0169",
+            "text": "MA",
+            "block_score": 0.9542967081069946,
+            "assignment_score": 2.3178460567149815,
+            "box": [
+              704.0,
+              520.0,
+              747.0,
+              548.0
+            ],
+            "center": [
+              725.5,
+              534.0
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0168",
+            "text": "~A",
+            "block_score": 0.9166815280914307,
+            "assignment_score": 2.309894556706417,
+            "box": [
+              580.0,
+              520.0,
+              623.0,
+              547.0
+            ],
+            "center": [
+              601.5,
+              533.5
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0162",
+            "text": "拆下件号P/NOFF",
+            "block_score": 0.9683369398117065,
+            "assignment_score": 2.306552796704324,
+            "box": [
+              564.0,
+              506.0,
+              648.0,
+              523.0
+            ],
+            "center": [
+              606.0,
+              514.5
+            ],
+            "reason": "overlap=0.98,center_near"
+          },
+          {
+            "block_id": "b0163",
+            "text": "拆下序号S/NOFF",
+            "block_score": 0.9795624017715454,
+            "assignment_score": 2.3000455123700068,
+            "box": [
+              675.0,
+              506.0,
+              760.0,
+              520.0
+            ],
+            "center": [
+              717.5,
+              513.0
+            ],
+            "reason": "overlap=0.98,center_near"
+          },
+          {
+            "block_id": "b0178",
+            "text": "参考手册",
+            "block_score": 0.9944513440132141,
+            "assignment_score": 2.283561386868537,
+            "box": [
+              511.0,
+              540.0,
+              560.0,
+              563.0
+            ],
+            "center": [
+              535.5,
+              551.5
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0167",
+            "text": "NA",
+            "block_score": 0.9325304627418518,
+            "assignment_score": 2.2485597660127308,
+            "box": [
+              507.0,
+              519.0,
+              547.0,
+              546.0
+            ],
+            "center": [
+              527.0,
+              532.5
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0161",
+            "text": "功能号FIN",
+            "block_score": 0.9998762011528015,
+            "assignment_score": 2.025755656813024,
+            "box": [
+              496.0,
+              503.0,
+              550.0,
+              523.0
+            ],
+            "center": [
+              523.0,
+              513.0
+            ],
+            "reason": "overlap=0.83,center_near"
+          },
+          {
+            "block_id": "b0184",
+            "text": "保留单号",
+            "block_score": 0.9998137950897217,
+            "assignment_score": 1.633197286321865,
+            "box": [
+              808.0,
+              546.0,
+              857.0,
+              561.0
+            ],
+            "center": [
+              832.5,
+              553.5
+            ],
+            "reason": "overlap=0.60,center_near"
+          }
+        ]
+      },
+      "needs_review": true,
+      "review_reason": "需人工复核",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_removed_part_info.png"
+    },
+    {
+      "id": "action_installed_part_info",
+      "label": "19 安装件信息",
+      "section": "fault_action",
+      "bbox": [
+        1460,
+        925,
+        420,
+        70
+      ],
+      "recognizer": "keyed_text",
+      "validator": "present",
+      "value": "安装序号S/N ON",
+      "normalized_value": "安装序号S/N ON",
+      "confidence": 0.7870475973242183,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0165",
+            "text": "安装序号S/N ON",
+            "block_score": 0.9820888638496399,
+            "assignment_score": 2.3611427919726546,
+            "box": [
+              913.0,
+              509.0,
+              997.0,
+              523.0
+            ],
+            "center": [
+              955.0,
+              516.0
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0184",
+            "text": "保留单号",
+            "block_score": 0.9998137950897217,
+            "assignment_score": 2.280385326867996,
+            "box": [
+              808.0,
+              546.0,
+              857.0,
+              561.0
+            ],
+            "center": [
+              832.5,
+              553.5
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0172",
+            "text": "~A",
+            "block_score": 0.7312498092651367,
+            "assignment_score": 2.261097098936597,
+            "box": [
+              931.0,
+              522.0,
+              976.0,
+              548.0
+            ],
+            "center": [
+              953.5,
+              535.0
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0164",
+            "text": "安装件号P/N ON",
+            "block_score": 0.9513674974441528,
+            "assignment_score": 2.2609036838759806,
+            "box": [
+              795.0,
+              509.0,
+              876.0,
+              523.0
+            ],
+            "center": [
+              835.5,
+              516.0
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0171",
+            "text": "~A",
+            "block_score": 0.8296365141868591,
+            "assignment_score": 2.209112709784717,
+            "box": [
+              815.0,
+              522.0,
+              857.0,
+              548.0
+            ],
+            "center": [
+              836.0,
+              535.0
+            ],
+            "reason": "overlap=1.00,center_near"
+          },
+          {
+            "block_id": "b0166",
+            "text": "工作者签名SIGN",
+            "block_score": 0.9986956715583801,
+            "assignment_score": 1.965518595359644,
+            "box": [
+              1017.0,
+              507.0,
+              1099.0,
+              526.0
+            ],
+            "center": [
+              1058.0,
+              516.5
+            ],
+            "reason": "overlap=0.80,center_near"
+          },
+          {
+            "block_id": "b0187",
+            "text": "DEFER NO",
+            "block_score": 0.9976806044578552,
+            "assignment_score": 1.7304759381685448,
+            "box": [
+              803.0,
+              558.0,
+              861.0,
+              574.0
+            ],
+            "center": [
+              832.0,
+              566.0
+            ],
+            "reason": "overlap=0.64,center_near"
+          }
+        ]
+      },
+      "needs_review": true,
+      "review_reason": "需人工复核",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_installed_part_info.png"
+    },
+    {
+      "id": "action_release_sign",
+      "label": "20 处理措施-放行签署",
+      "section": "fault_action",
+      "bbox": [
+        1865,
+        910,
+        175,
+        58
+      ],
+      "recognizer": "signature_or_text",
+      "validator": "name_not_place",
+      "value": "工作者签名SIGN",
+      "normalized_value": "工作者签名SIGN",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR",
+      "raw": {
+        "candidates": [
+          {
+            "block_id": "b0166",
+            "text": "工作者签名SIGN",
+            "block_score": 0.9986956715583801,
+            "assignment_score": 3.03095943597813,
+            "box": [
+              1017.0,
+              507.0,
+              1099.0,
+              526.0
+            ],
+            "center": [
+              1058.0,
+              516.5
+            ],
+            "reason": "overlap=1.00,center_near,pattern=0.60"
+          },
+          {
+            "block_id": "b0165",
+            "text": "安装序号S/N ON",
+            "block_score": 0.9820888638496399,
+            "assignment_score": 1.6095919614533112,
+            "box": [
+              913.0,
+              509.0,
+              997.0,
+              523.0
+            ],
+            "center": [
+              955.0,
+              516.0
+            ],
+            "reason": "overlap=0.17,pattern=0.60"
+          }
+        ]
+      },
+      "needs_review": true,
+      "review_reason": "需人工复核",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_release_sign.png"
+    },
+    {
+      "id": "action_authorization",
+      "label": "21 处理措施-授权号",
       "section": "fault_action",
       "bbox": [
         2040,
@@ -5827,40 +7304,47 @@
       "value": "",
       "normalized_value": "",
       "confidence": 0.0,
-      "provider": "siliconflow",
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR+ROI复核",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [],
-        "needs_review": true,
-        "reason": "无候选",
-        "evidence_block_ids": []
+        "roi_review": {
+          "roi_url": "/runs/local_29_rule_smoke/roi_reviews/action_authorization.png",
+          "value": "",
+          "normalized_value": "",
+          "confidence": 0.0,
+          "provider": "roi-vlm:mock",
+          "model": "mock",
+          "passed": false,
+          "message": "授权号不是6位数字",
+          "raw": {
+            "roi_review": {
+              "roi_url": "/runs/local_29_rule_smoke/roi_reviews/action_authorization.png",
+              "previous": {
+                "value": "",
+                "normalized_value": "",
+                "confidence": 0.0,
+                "provider": "siliconflow:fallback_cleaner",
+                "model": "deepseek-ai/DeepSeek-V4-Flash",
+                "needs_review": true,
+                "review_reason": "需人工复核"
+              },
+              "result": null
+            }
+          },
+          "duration_ms": 2
+        }
       },
       "needs_review": true,
-      "review_reason": "无候选",
+      "review_reason": "需人工复核",
       "passed": false,
       "message": "授权号不是6位数字",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/fault_authorization.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/action_authorization.png"
     },
     {
       "id": "apu_cum_hours",
-      "label": "APU累计使用时间",
+      "label": "22 APU累计使用时间",
       "section": "apu",
       "bbox": [
         505,
@@ -5869,36 +7353,20 @@
         100
       ],
       "recognizer": "numeric_text",
-      "validator": "digit_length",
+      "validator": "number_less_than",
       "value": "2238",
       "normalized_value": "2238",
-      "confidence": 1.0,
-      "provider": "siliconflow",
+      "confidence": 0.45866285397206735,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
             "block_id": "b0247",
             "text": "2238",
             "block_score": 0.999990701675415,
-            "assignment_score": 2.255988561916202,
+            "assignment_score": 1.375988561916202,
             "box": [
               322.0,
               911.0,
@@ -5909,24 +7377,19 @@
               354.0,
               929.5
             ],
-            "reason": "overlap=0.38,center_near,pattern=0.90"
+            "reason": "overlap=0.38,center_near"
           }
-        ],
-        "needs_review": false,
-        "reason": "唯一候选",
-        "evidence_block_ids": [
-          "b0247"
         ]
       },
       "needs_review": false,
-      "review_reason": "唯一候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/apu_cum_hours.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/apu_cum_hours.png"
     },
     {
       "id": "apu_cum_cycles",
-      "label": "APU累计使用循环",
+      "label": "23 APU累计使用循环",
       "section": "apu",
       "bbox": [
         690,
@@ -5935,59 +7398,92 @@
         100
       ],
       "recognizer": "numeric_text",
-      "validator": "digit_length",
-      "value": "3481",
-      "normalized_value": "3481",
-      "confidence": 0.95,
-      "provider": "roi-vlm:aliyun",
-      "model": "qwen3.7-plus",
-      "source_label": "ROI-VLM",
+      "validator": "number_less_than",
+      "value": "348",
+      "normalized_value": "348",
+      "confidence": 0.44331308471077285,
+      "provider": "siliconflow:fallback_cleaner",
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "source_label": "PP-OCR+ROI复核",
       "raw": {
-        "roi_review": {
-          "roi_url": "/runs/hybrid_sample_01_roi_review_v3/roi_reviews/apu_cum_cycles.png",
-          "previous": {
-            "value": "348",
-            "normalized_value": "348",
-            "confidence": 1.0,
-            "provider": "siliconflow",
-            "model": "deepseek-ai/DeepSeek-V4-Flash",
-            "needs_review": false,
-            "review_reason": "最高分候选"
+        "candidates": [
+          {
+            "block_id": "b0243",
+            "text": "348",
+            "block_score": 0.9999914765357971,
+            "assignment_score": 1.3299392541323185,
+            "box": [
+              403.0,
+              908.0,
+              461.0,
+              948.0
+            ],
+            "center": [
+              432.0,
+              928.0
+            ],
+            "reason": "overlap=0.35,center_near"
           },
-          "result": {
-            "content": "```json\n{\n    \"value\": \"3481\",\n    \"normalized_value\": \"3481\",\n    \"confidence\": 0.95\n}\n```",
-            "usage": {
-              "prompt_tokens": 199,
-              "total_tokens": 576,
-              "completion_tokens": 377,
-              "prompt_tokens_details": {
-                "cached_tokens": 0,
-                "image_tokens": 72,
-                "text_tokens": 127
-              },
-              "completion_tokens_details": {
-                "reasoning_tokens": 332,
-                "text_tokens": 45
-              }
-            }
+          {
+            "block_id": "b0247",
+            "text": "2238",
+            "block_score": 0.999990701675415,
+            "assignment_score": 0.672838617211895,
+            "box": [
+              322.0,
+              911.0,
+              386.0,
+              948.0
+            ],
+            "center": [
+              354.0,
+              929.5
+            ],
+            "reason": "overlap=0.01"
           }
+        ],
+        "roi_review": {
+          "roi_url": "/runs/local_29_rule_smoke/roi_reviews/apu_cum_cycles.png",
+          "value": "",
+          "normalized_value": "",
+          "confidence": 0.0,
+          "provider": "roi-vlm:mock",
+          "model": "mock",
+          "passed": false,
+          "message": "APU循环不小于99999",
+          "raw": {
+            "roi_review": {
+              "roi_url": "/runs/local_29_rule_smoke/roi_reviews/apu_cum_cycles.png",
+              "previous": {
+                "value": "348",
+                "normalized_value": "348",
+                "confidence": 0.44331308471077285,
+                "provider": "siliconflow:fallback_cleaner",
+                "model": "deepseek-ai/DeepSeek-V4-Flash",
+                "needs_review": true,
+                "review_reason": "需人工复核"
+              },
+              "result": null
+            }
+          },
+          "duration_ms": 1
         }
       },
-      "needs_review": false,
-      "review_reason": "ROI复核通过",
+      "needs_review": true,
+      "review_reason": "需人工复核",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/apu_cum_cycles.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/apu_cum_cycles.png"
     },
     {
-      "id": "awr_service_completed",
-      "label": "适航放行-完成维护类别",
+      "id": "awr_post_flt_checkbox",
+      "label": "24 适航放行-航后",
       "section": "airworthiness_release",
       "bbox": [
         925,
-        1578,
+        1588,
         58,
-        118
+        40
       ],
       "recognizer": "checkbox",
       "validator": "checked",
@@ -5998,17 +7494,17 @@
       "model": "dark-pixel-density",
       "source_label": "Checkbox",
       "raw": {
-        "dark_density": 0.307997557997558
+        "dark_density": 0.37002856515051635
       },
       "needs_review": false,
       "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/awr_service_completed.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/awr_post_flt_checkbox.png"
     },
     {
       "id": "awr_station",
-      "label": "适航放行-地点",
+      "label": "25 适航放行-地点",
       "section": "airworthiness_release",
       "bbox": [
         1250,
@@ -6020,27 +7516,11 @@
       "validator": "exact_text",
       "value": "重庆",
       "normalized_value": "重庆",
-      "confidence": 0.9989,
-      "provider": "siliconflow",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
             "block_id": "b0242",
@@ -6059,22 +7539,17 @@
             ],
             "reason": "overlap=1.00,center_near,pattern=1.00"
           }
-        ],
-        "needs_review": false,
-        "reason": "唯一候选",
-        "evidence_block_ids": [
-          "b0242"
         ]
       },
       "needs_review": false,
-      "review_reason": "唯一候选",
+      "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/awr_station.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/awr_station.png"
     },
     {
       "id": "awr_date",
-      "label": "适航放行-日期",
+      "label": "26 适航放行-日期",
       "section": "airworthiness_release",
       "bbox": [
         1430,
@@ -6086,27 +7561,11 @@
       "validator": "same_day",
       "value": "2026.06.11",
       "normalized_value": "2026-06-11",
-      "confidence": 0.9996,
-      "provider": "siliconflow",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
             "block_id": "b0245",
@@ -6125,28 +7584,23 @@
             ],
             "reason": "overlap=1.00,center_near,pattern=1.00"
           }
-        ],
-        "needs_review": false,
-        "reason": "唯一候选",
-        "evidence_block_ids": [
-          "b0245"
         ]
       },
       "needs_review": false,
-      "review_reason": "唯一候选",
+      "review_reason": "",
       "passed": false,
       "message": "放行日期不是今天",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/awr_date.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/awr_date.png"
     },
     {
-      "id": "awr_deferred_item",
-      "label": "适航放行-保留项目",
+      "id": "awr_deferred_item_checked",
+      "label": "27 适航放行-保留项目",
       "section": "airworthiness_release",
       "bbox": [
         1615,
-        1580,
+        1615,
         190,
-        115
+        70
       ],
       "recognizer": "checkbox",
       "validator": "checked",
@@ -6157,17 +7611,17 @@
       "model": "dark-pixel-density",
       "source_label": "Checkbox",
       "raw": {
-        "dark_density": 0.20150065245759025
+        "dark_density": 0.49874614197530864
       },
       "needs_review": false,
       "review_reason": "",
       "passed": true,
       "message": "",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/awr_deferred_item.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/awr_deferred_item_checked.png"
     },
     {
       "id": "awr_release_sign",
-      "label": "适航放行-放行签署",
+      "label": "28 适航放行-放行签署",
       "section": "airworthiness_release",
       "bbox": [
         1805,
@@ -6176,36 +7630,20 @@
         115
       ],
       "recognizer": "signature_or_text",
-      "validator": "present_and_match",
-      "value": "",
-      "normalized_value": "",
-      "confidence": 0.0,
-      "provider": "siliconflow",
+      "validator": "name_not_place",
+      "value": "RELEASESION",
+      "normalized_value": "RELEASESION",
+      "confidence": 0.95,
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [
           {
             "block_id": "b0237",
             "text": "RELEASESION",
             "block_score": 0.9906015396118164,
-            "assignment_score": 2.9620639694808917,
+            "assignment_score": 2.9970639694808914,
             "box": [
               982.0,
               876.0,
@@ -6216,13 +7654,13 @@
               1025.0,
               883.0
             ],
-            "reason": "overlap=1.00,center_near,pattern=0.55"
+            "reason": "overlap=1.00,center_near,pattern=0.60"
           },
           {
             "block_id": "b0250",
             "text": "飞机技术状态满足适航要求，适合飞行，The A/C is considered fit for Release to Service",
             "block_score": 0.9935399889945984,
-            "assignment_score": 1.7438496688756795,
+            "assignment_score": 1.7788496688756794,
             "box": [
               681.0,
               931.0,
@@ -6233,13 +7671,13 @@
               879.0,
               940.0
             ],
-            "reason": "overlap=0.32,pattern=0.55"
+            "reason": "overlap=0.32,pattern=0.60"
           },
           {
             "block_id": "b0248",
             "text": "□是YES 否NO",
             "block_score": 0.8677803874015808,
-            "assignment_score": 1.400487103512622,
+            "assignment_score": 1.4354871035126222,
             "box": [
               848.0,
               904.0,
@@ -6250,22 +7688,19 @@
               904.0,
               914.5
             ],
-            "reason": "overlap=0.10,pattern=0.55"
+            "reason": "overlap=0.10,pattern=0.60"
           }
-        ],
-        "needs_review": true,
-        "reason": "无有效签名候选",
-        "evidence_block_ids": []
+        ]
       },
       "needs_review": true,
-      "review_reason": "无有效签名候选",
-      "passed": false,
-      "message": "放行签署缺失",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/awr_release_sign.png"
+      "review_reason": "需人工复核",
+      "passed": true,
+      "message": "",
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/awr_release_sign.png"
     },
     {
       "id": "awr_license",
-      "label": "适航放行-执照号",
+      "label": "29 适航放行-执照号",
       "section": "airworthiness_release",
       "bbox": [
         1985,
@@ -6278,36 +7713,43 @@
       "value": "",
       "normalized_value": "",
       "confidence": 0.0,
-      "provider": "siliconflow",
+      "provider": "siliconflow:fallback_cleaner",
       "model": "deepseek-ai/DeepSeek-V4-Flash",
-      "source_label": "Cleaner",
+      "source_label": "PP-OCR+ROI复核",
       "raw": {
-        "cleaner": {
-          "content": "{\n  \"fields\": {\n    \"oil_last_row_added\": {\n      \"value\": \"0\",\n      \"normalized_value\": \"0\",\n      \"confidence\": 0.9994,\n      \"evidence_block_ids\": [\"b0107\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"oil_qty\": {\n      \"value\": \"19.5\",\n      \"normalized_value\": \"19.5\",\n      \"confidence\": 0.9987,\n      \"evidence_block_ids\": [\"b0108\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"fault_flight_no\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9982,\n      \"evidence_block_ids\": [\"b0140\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"fault_reported_by\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_report_en\": {\n      \"value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"normalized_value\": \"FaultmesSge:E/W. COND AFT CRG ISOLVALVE\",\n      \"confidence\": 0.8888,\n      \"evidence_block_ids\": [\"b0160\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分英文候选\"\n    },\n    \"fault_ref\": {\n      \"value\": \"TSM21-28-00-810-802A\",\n      \"normalized_value\": \"TSM21-28-00-810-802A\",\n      \"confidence\": 0.8748,\n      \"evidence_block_ids\": [\"b0146\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一手册编号候选\"\n    },\n    \"fault_action_station\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_date\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"fault_worker_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"fault_authorization\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    },\n    \"apu_cum_hours\": {\n      \"value\": \"2238\",\n      \"normalized_value\": \"2238\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0247\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"apu_cum_cycles\": {\n      \"value\": \"348\",\n      \"normalized_value\": \"348\",\n      \"confidence\": 1.0,\n      \"evidence_block_ids\": [\"b0243\"],\n      \"needs_review\": false,\n      \"reason\": \"最高分候选\"\n    },\n    \"awr_station\": {\n      \"value\": \"重庆\",\n      \"normalized_value\": \"重庆\",\n      \"confidence\": 0.9989,\n      \"evidence_block_ids\": [\"b0242\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_date\": {\n      \"value\": \"2026.06.11\",\n      \"normalized_value\": \"2026-06-11\",\n      \"confidence\": 0.9996,\n      \"evidence_block_ids\": [\"b0245\"],\n      \"needs_review\": false,\n      \"reason\": \"唯一候选\"\n    },\n    \"awr_release_sign\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无有效签名候选\"\n    },\n    \"awr_license\": {\n      \"value\": \"\",\n      \"normalized_value\": \"\",\n      \"confidence\": 0.0,\n      \"evidence_block_ids\": [],\n      \"needs_review\": true,\n      \"reason\": \"无候选\"\n    }\n  }\n}",
-          "usage": {
-            "prompt_tokens": 3117,
-            "completion_tokens": 4986,
-            "total_tokens": 8103,
-            "completion_tokens_details": {
-              "reasoning_tokens": 3877
-            },
-            "prompt_tokens_details": {
-              "cached_tokens": 3072
-            },
-            "prompt_cache_hit_tokens": 3072,
-            "prompt_cache_miss_tokens": 45
-          }
-        },
         "candidates": [],
-        "needs_review": true,
-        "reason": "无候选",
-        "evidence_block_ids": []
+        "roi_review": {
+          "roi_url": "/runs/local_29_rule_smoke/roi_reviews/awr_license.png",
+          "value": "",
+          "normalized_value": "",
+          "confidence": 0.0,
+          "provider": "roi-vlm:mock",
+          "model": "mock",
+          "passed": false,
+          "message": "执照号不合规",
+          "raw": {
+            "roi_review": {
+              "roi_url": "/runs/local_29_rule_smoke/roi_reviews/awr_license.png",
+              "previous": {
+                "value": "",
+                "normalized_value": "",
+                "confidence": 0.0,
+                "provider": "siliconflow:fallback_cleaner",
+                "model": "deepseek-ai/DeepSeek-V4-Flash",
+                "needs_review": true,
+                "review_reason": "需人工复核"
+              },
+              "result": null
+            }
+          },
+          "duration_ms": 1
+        }
       },
       "needs_review": true,
-      "review_reason": "无候选",
+      "review_reason": "需人工复核",
       "passed": false,
       "message": "执照号不合规",
-      "roi_url": "/runs/hybrid_sample_01_roi_review_v3/rois/awr_license.png"
+      "roi_url": "/runs/local_29_rule_smoke/ppocr_rois/awr_license.png"
     }
   ]
 }

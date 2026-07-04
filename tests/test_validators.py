@@ -33,8 +33,29 @@ def test_english_text() -> None:
     assert not validate(spec, RecognitionResult("故障 message"))[0]
 
 
+def test_bilingual_text() -> None:
+    spec = field("bilingual_text", {"min_letters": 1, "min_cjk": 1})
+    assert validate(spec, RecognitionResult("更换氧气瓶 replace oxygen cylinder"))[0]
+    assert not validate(spec, RecognitionResult("replace oxygen cylinder"))[0]
+    assert not validate(spec, RecognitionResult("更换氧气瓶"))[0]
+
+
+def test_name_not_place() -> None:
+    spec = field("name_not_place", {"not_allow": ["重庆", "Chongqing"]})
+    assert validate(spec, RecognitionResult("李四"))[0]
+    assert not validate(spec, RecognitionResult("重庆"))[0]
+    assert not validate(spec, RecognitionResult(""))[0]
+
+
 def test_digit_length() -> None:
     spec = field("digit_length", {"allow_lengths": [4, 5]})
     assert validate(spec, RecognitionResult("2238"))[0]
     assert validate(spec, RecognitionResult("12345"))[0]
     assert not validate(spec, RecognitionResult("123"))[0]
+
+
+def test_number_less_than() -> None:
+    spec = field("number_less_than", {"max": 99999})
+    assert validate(spec, RecognitionResult("99888"))[0]
+    assert not validate(spec, RecognitionResult("99999"))[0]
+    assert not validate(spec, RecognitionResult(""))[0]

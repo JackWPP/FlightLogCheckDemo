@@ -94,7 +94,7 @@ def incompatible_value(field: FieldSpec, text: str) -> bool:
         return not bool(re.search(r"\d{4,6}", upper))
     if value_type in {"license"}:
         return not bool(re.search(r"CA|CAA|CAAC|CAACML|\d{4,8}", upper))
-    if field.validator in {"int_range", "digit_length"}:
+    if field.validator in {"int_range", "digit_length", "number_less_than"}:
         return not bool(re.fullmatch(r"\d+(?:\.\d+)?", compact))
     if field.validator == "same_day":
         return not bool(re.search(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", text))
@@ -194,9 +194,11 @@ def pattern_score(field: FieldSpec, text: str) -> float:
         return 1.0 if re.search(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", text) else 0.0
     if field.validator in {"int_range", "digit_length"}:
         return 0.9 if re.fullmatch(r"\d+(?:\.\d+)?", compact) else 0.0
-    if field.validator == "english_text":
+    if field.validator in {"english_text", "bilingual_text"}:
         has_letter = bool(re.search(r"[A-Za-z]", text))
         has_cjk = bool(re.search(r"[\u4e00-\u9fff]", text))
+        if field.validator == "bilingual_text":
+            return 0.9 if has_letter and has_cjk else (0.45 if has_letter or has_cjk else 0.0)
         return 0.8 if has_letter and not has_cjk else (0.35 if has_letter else 0.0)
     if field.validator == "exact_text":
         allowed = [str(item).replace(" ", "").upper() for item in field.params.get("allow", [])]
@@ -204,6 +206,8 @@ def pattern_score(field: FieldSpec, text: str) -> float:
             return 1.0
         if any(item in upper or upper in item for item in allowed if item):
             return 0.65
+    if field.validator == "name_not_place":
+        return 0.6 if compact and "重庆" not in compact and "CHONGQING" not in upper else 0.0
     value_type = field.assignment.get("value_type")
     if value_type == "signature":
         return 0.55 if not label_noise(field, text) else 0.0

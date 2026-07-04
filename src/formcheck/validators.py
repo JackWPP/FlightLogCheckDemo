@@ -62,6 +62,23 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
         has_cjk = bool(re.search(r"[\u4e00-\u9fff]", value))
         return has_letter and not has_cjk, field.fail_msg
 
+    if validator == "bilingual_text":
+        has_letter = bool(re.search(r"[A-Za-z]", value))
+        has_cjk = bool(re.search(r"[\u4e00-\u9fff]", value))
+        min_letters = int(params.get("min_letters", 1))
+        min_cjk = int(params.get("min_cjk", 1))
+        return (
+            len(re.findall(r"[A-Za-z]", value)) >= min_letters
+            and len(re.findall(r"[\u4e00-\u9fff]", value)) >= min_cjk
+            and has_letter
+            and has_cjk
+        ), field.fail_msg
+
+    if validator == "name_not_place":
+        compact = value.replace(" ", "").lower()
+        blocked = [normalize_text(str(item)).replace(" ", "").lower() for item in params.get("not_allow", ["重庆", "chongqing"])]
+        return bool(compact) and compact not in blocked, field.fail_msg
+
     if validator == "prefix_or_exact":
         upper = value.upper().replace(" ", "")
         if upper in {str(item).upper() for item in params.get("allow_exact", [])}:
@@ -78,6 +95,13 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
     if validator == "digit_length":
         digits = re.sub(r"\D", "", value)
         return len(digits) in {int(n) for n in params.get("allow_lengths", [])}, field.fail_msg
+
+    if validator == "number_less_than":
+        match = re.search(r"-?\d+(?:\.\d+)?", value)
+        if not match:
+            return False, field.fail_msg
+        number = float(match.group(0))
+        return number < float(params["max"]), field.fail_msg
 
     if validator in {"present", "present_and_match", "exact_text_or_ocr_match"}:
         return bool(value), field.fail_msg

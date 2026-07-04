@@ -133,11 +133,11 @@
   <main>
     <section>
       <h2>1. 演示目标</h2>
-      <p>老板需要对飞行记录单中的少量关键字段做核查：滑油栏、故障报告/处理措施、APU 累计时间/循环、适航放行栏。系统不需要完整理解整张表，而是要稳定提取关键字段，并用最短文字指出哪里有问题。</p>
+      <p>老板需要按照带序号的检查指南核查 29 个关键点：页首注册号、滑油栏、故障报告/处理措施、APU 累计时间/循环、适航放行栏。系统不需要完整理解整张表，而是要稳定提取关键字段，并用最短文字指出哪里有问题。</p>
       <div class="grid cols-3">
-        <div class="metric"><strong>21</strong><span>电子化字段</span></div>
+        <div class="metric"><strong>29</strong><span>电子化检查点</span></div>
         <div class="metric"><strong>252</strong><span>默认示例 OCR blocks</span></div>
-        <div class="metric"><strong>12 / 21</strong><span>默认示例通过字段</span></div>
+        <div class="metric"><strong>21 / 29</strong><span>默认示例通过字段</span></div>
       </div>
     </section>
 
@@ -183,31 +183,40 @@
           <figcaption>配准图。历史演示证据；线上默认关闭本地 SIFT，仅在可选辅助模式下生成。</figcaption>
         </figure>
         <figure>
-          <img src="../outputs/demo_sample/rois/apu_cum_cycles.png" alt="APU 累计使用循环 ROI">
-          <figcaption>APU 累计使用循环 ROI。主 OCR 读成 348，ROI 复核读成 3481。</figcaption>
+          <img src="../outputs/demo_sample/ppocr_rois/action_authorization.png" alt="授权号 ROI">
+          <figcaption>授权号 ROI。数字、签名、证照类字段保留局部证据，便于二次复核。</figcaption>
         </figure>
       </div>
     </section>
 
     <section>
-      <h2>5. ROI 复核案例：APU 累计使用循环</h2>
-      <p>在默认示例中，整页 OCR 和 cleaner 一开始将 APU 累计使用循环读为 <code>348</code>，未满足“4 或 5 位数字”的规则。系统随后基于 PaddleOCR 图和候选 block 裁切扩展 ROI，调用视觉模型复核，得到 <code>3481</code>，并重新通过本地 validator。</p>
+      <h2>5. ROI 复核机制</h2>
+      <p>新版规则中，注册号、授权号、执照号、签名和 APU 数字属于高风险字段。系统会基于 PaddleOCR 矫正图和候选 block 裁切局部 ROI；上传实时分析时可交给视觉模型复核，默认缓存示例则直接展示已有 ROI 证据。</p>
       <table>
-        <tr><th>阶段</th><th>值</th><th>结果</th><th>说明</th></tr>
-        <tr><td>PP-OCR + Cleaner</td><td><code>348</code></td><td class="bad">失败</td><td>只有 3 位，不满足 APU 循环规则。</td></tr>
-        <tr><td>ROI-VLM 复核</td><td><code>3481</code></td><td class="good">通过</td><td>扩展 ROI 识别出最后一位。</td></tr>
-        <tr><td>最终报告</td><td><code>3481</code></td><td class="good">通过</td><td>来源标记为 ROI-VLM，证据保留在 report.json。</td></tr>
+        <tr><th>字段类型</th><th>规则</th><th>复核策略</th></tr>
+        <tr><td>授权号</td><td><code>^[0-9]{6}$</code></td><td>失败时裁切授权号格子进入 ROI-VLM。</td></tr>
+        <tr><td>执照号</td><td><code>^CAACML[0-9]{8}$</code></td><td>保留证照局部图和 OCR candidates。</td></tr>
+        <tr><td>APU 累计</td><td>数值小于 <code>99999</code></td><td>数字字段可强制 ROI 复核，避免漏读末位。</td></tr>
       </table>
     </section>
 
     <section>
       <h2>6. 字段和规则配置</h2>
       <p>字段定义集中在 <code>fields.yaml</code>，每个字段包含 id、label、section、bbox、recognizer、validator、params、fail_msg 和 assignment。这样后续可以在不改代码的前提下微调字段框和候选搜索区域。</p>
+      <pre>id: action_authorization
+label: 21 处理措施-授权号
+recognizer: keyed_text
+validator: regex
+params: {pattern: "^[0-9]{6}$"}
+assignment:
+  search_bbox: [1990, 895, 360, 110]
+  value_type: authorization
+  prefer_roi_vlm: true</pre>
       <pre>id: apu_cum_cycles
-label: APU累计使用循环
+label: 23 APU累计使用循环
 recognizer: numeric_text
-validator: digit_length
-params: {allow_lengths: [4, 5]}
+validator: number_less_than
+params: {max: 99999}
 assignment:
   search_bbox: [690, 1660, 230, 124]
   value_type: numeric

@@ -49,7 +49,8 @@ copy .env.example .env
 - `ALIYUN_API_KEY`：ROI 级视觉复核，默认建议使用图像 OCR 模型 `qwen3.5-ocr`。
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型；若主模型超时或报错，可通过 `ROI_REVIEW_FALLBACK_MODEL` 自动降级。
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
-- `CLEANER_REQUEST_TIMEOUT_SECONDS` / `ISSUE_TRIAGE_TIMEOUT_SECONDS`：Cleaner 与问题终裁超时，默认 `45`。
+- `CLEANER_SECTION_TIMEOUT_SECONDS` / `CLEANER_TOTAL_BUDGET_SECONDS`：Cleaner 分区请求超时与总预算，默认 `75` / `90`。
+- `ISSUE_TRIAGE_TIMEOUT_SECONDS`：问题终裁超时，默认 `45`。
 - `ISSUE_DISPLAY_LIMIT`：右侧展示问题数量上限，默认 `4`；`all_problems` 不受影响。
 - `REGISTRATION_MODE`：默认 `off`。可选 `optional` / `required`，只在需要旧版 SIFT 配准 ROI 时开启。
 - `PPOCR_CACHE_ENABLED`：默认 `1`。同一张图片、同一组 PP-OCR 参数会复用 `outputs/runtime/ocr_cache/`，避免反复提交云端 OCR。
@@ -90,11 +91,11 @@ fields.yaml             字段、ROI、规则和候选归属配置
 默认示例使用 `outputs/demo_sample/` 中的缓存结果：
 
 - OCR blocks：252
-- 字段总数：21
-- 通过字段：12
-- 失败字段：9
-- 需复核字段：8
-- APU 累计使用循环：主 OCR 读成 `348`，ROI-VLM 复核为 `3481` 后通过。
+- 字段总数：29
+- 通过字段：21
+- 失败字段：8
+- 需复核字段：13
+- 当前规则来自甲方带序号检查单：注册号、滑油栏、故障报告、处理措施、APU 累计、适航放行共 29 个检查点。
 
 上传新图的 `report.json` 会包含 `timings`，用于定位线上慢点，例如 `ppocr_submit_ms`、`ppocr_poll_ms`、`ppocr_download_ms`、`assignment_ms`、`cleaner_ms`、`review_ms`、`issue_triage_ms` 和 `total_ms`。`summary.ocr_cache_hit` 为 `true` 时表示本次整页 OCR 走缓存，没有重新访问 PaddleOCR 云端。
 
@@ -125,7 +126,7 @@ docs/technical_report.html
 
 1. 打开 Demo 首页，看默认缓存示例。
 2. 切换原图、OCR 图、扫描底图、AI 底图。
-3. 点击 APU 累计使用循环，展示 ROI-VLM 如何把 `348` 复核为 `3481`。
+3. 点击数字、签名或证照类字段，展示 PP-OCR ROI 与候选证据。
 4. 点击问题列表，展示最短问题输出和字段证据。
 5. 上传新图，说明实时链路会调用云端模型。
 

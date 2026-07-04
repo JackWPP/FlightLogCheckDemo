@@ -10,7 +10,7 @@ from .issue_triage import triage_issues
 from .pipeline import build_summary, source_label
 
 
-DEMO_RUN_ID = "hybrid_sample_01_roi_review_v3"
+DEMO_RUN_ID = "local_29_rule_smoke"
 DEMO_DIR = OUTPUTS_DIR / "demo_sample"
 
 
@@ -30,6 +30,12 @@ def ensure_demo_sample() -> None:
         dst_roi_dir.mkdir(exist_ok=True)
         for path in src_roi_dir.glob("*.png"):
             copy_file(path, dst_roi_dir / path.name)
+    src_ppocr_roi_dir = OUT_DIR / DEMO_RUN_ID / "ppocr_rois"
+    dst_ppocr_roi_dir = DEMO_DIR / "ppocr_rois"
+    if src_ppocr_roi_dir.exists():
+        dst_ppocr_roi_dir.mkdir(exist_ok=True)
+        for path in src_ppocr_roi_dir.glob("*.png"):
+            copy_file(path, dst_ppocr_roi_dir / path.name)
     manifest = build_manifest()
     (DEMO_DIR / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -48,9 +54,20 @@ def demo_payload() -> dict[str, Any]:
     report["ocr"]["candidates"] = candidates
     report["ocr"]["blocks"] = blocks
     for field in report.get("fields", []):
-        field["roi_url"] = f"/outputs/demo_sample/rois/{field['id']}.png"
+        ppocr_roi = DEMO_DIR / "ppocr_rois" / f"{field['id']}.png"
+        field["roi_url"] = (
+            f"/outputs/demo_sample/ppocr_rois/{field['id']}.png"
+            if ppocr_roi.exists()
+            else f"/outputs/demo_sample/rois/{field['id']}.png"
+        )
         field.setdefault("source_label", source_label(field.get("provider", "")))
-        high_risk = field["id"] in {"fault_worker_sign", "fault_authorization", "awr_release_sign", "awr_license"}
+        high_risk = field["id"] in {
+            "ac_reg_digits",
+            "action_authorization",
+            "action_release_sign",
+            "awr_release_sign",
+            "awr_license",
+        }
         unresolved = not (field.get("value") or field.get("normalized_value"))
         field.setdefault("needs_review", bool(high_risk or unresolved))
         field.setdefault("review_reason", "需人工复核" if field.get("needs_review") else "")

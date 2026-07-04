@@ -12,4 +12,7 @@ def test_demo_payload_loads_cached_report() -> None:
     assert report["upload_url"].startswith("/outputs/demo_sample/")
     assert report["ocr"]["blocks"]
     assert report["summary"]["field_count"] == len(report["fields"])
-    assert all(field["roi_url"].startswith("/outputs/demo_sample/rois/") for field in report["fields"])
+    assert all(
+        field["roi_url"].startswith(("/outputs/demo_sample/ppocr_rois/", "/outputs/demo_sample/rois/"))
+        for field in report["fields"]
+    )
