@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from formcheck.issue_triage import (
     build_triage_prompt,
     evidence_state,
@@ -107,6 +109,89 @@ def test_problem_items_map_paraphrased_text_by_field_label() -> None:
 
     assert items[0]["field_id"] == "apu_cum_cycles"
     assert items[0]["kind"] == "review"
+
+
+def test_issue_triage_uses_structured_llm_problem_items(monkeypatch) -> None:
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "test-key")
+    monkeypatch.setenv("ISSUE_DISPLAY_LIMIT", "4")
+    fields = [
+        {
+            "id": "apu_cum_cycles",
+            "label": "23 APU累计使用循环",
+            "validator": "number_less_than",
+            "message": "APU循环不小于99999",
+            "passed": True,
+            "needs_review": True,
+            "review_reason": "ROI复核值与OCR候选不一致",
+        }
+    ]
+
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            content = {
+                "problems": ["循环读数需复核"],
+                "problem_items": [
+                    {
+                        "field_id": "apu_cum_cycles",
+                        "kind": "review",
+                        "text": "循环读数需复核",
+                    }
+                ],
+                "reason": "数字字段且证据不一致",
+            }
+            return {"choices": [{"message": {"content": json.dumps(content, ensure_ascii=False)}}], "usage": {}}
+
+    monkeypatch.setattr("formcheck.issue_triage.requests.post", lambda *args, **kwargs: Response())
+
+    result = triage_issues(fields, provider="siliconflow")
+
+    assert result["problems"] == ["循环读数需复核"]
+    assert result["problem_items"][0]["field_id"] == "apu_cum_cycles"
+    assert result["problem_items"][0]["kind"] == "review"
+    assert result["problem_items"][0]["text"] == "循环读数需复核"
+    assert result["issue_triage"]["selected_review"] == ["循环读数需复核"]
+
+
+def test_issue_triage_rejects_invalid_structured_field_id(monkeypatch) -> None:
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "test-key")
+    fields = [
+        {
+            "id": "license_no",
+            "label": "29 适航放行-执照号",
+            "validator": "regex",
+            "message": "执照号不合规",
+            "passed": False,
+        }
+    ]
+
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            content = {
+                "problems": ["适航放行-执照号格式错误"],
+                "problem_items": [
+                    {
+                        "field_id": "invented_field",
+                        "kind": "failure",
+                        "text": "适航放行-执照号格式错误",
+                    }
+                ],
+                "reason": "测试无效字段引用",
+            }
+            return {"choices": [{"message": {"content": json.dumps(content, ensure_ascii=False)}}], "usage": {}}
+
+    monkeypatch.setattr("formcheck.issue_triage.requests.post", lambda *args, **kwargs: Response())
+
+    result = triage_issues(fields, provider="siliconflow")
+
+    assert result["problems"] == ["适航放行-执照号格式错误"]
+    assert result["problem_items"][0]["field_id"] == "license_no"
+    assert result["problem_items"][0]["kind"] == "failure"
 
 
 def test_issue_triage_skips_llm_when_cleaner_failed(monkeypatch) -> None:

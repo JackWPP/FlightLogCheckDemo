@@ -87,9 +87,14 @@ def triage_issues(
         data = response.json()
         content = data["choices"][0]["message"]["content"]
         parsed = parse_json_content(content)
-        selected = [str(item) for item in parsed.get("problems", []) if str(item).strip()]
-        selected = selected[:limit] or fallback["problems"]
-        problem_items = problem_items_for_selected(selected, failed, review_pending)
+        structured_items = sanitize_llm_problem_items(parsed, failed, review_pending, limit)
+        selected = [item["text"] for item in structured_items]
+        if not selected:
+            selected = [str(item) for item in parsed.get("problems", []) if str(item).strip()]
+            selected = selected[:limit] or fallback["problems"]
+            problem_items = problem_items_for_selected(selected, failed, review_pending)
+        else:
+            problem_items = structured_items
         suppressed = [item for item in all_problems if item not in selected]
         review_problems = [review_message(field) for field in review_pending]
         suppressed_review = [item for item in review_problems if item not in selected]
@@ -104,7 +109,7 @@ def triage_issues(
                 "limit": limit,
                 "selected": selected,
                 "suppressed": suppressed,
-                "selected_review": [item for item in selected if item in review_problems],
+                "selected_review": [item["text"] for item in problem_items if item.get("kind") == "review"],
                 "suppressed_review": suppressed_review,
                 "reason": parsed.get("reason", ""),
                 "raw": {"content": content, "usage": data.get("usage")},
@@ -178,6 +183,53 @@ def problem_items_for_selected(
     for field in review_pending:
         candidates.append((review_message(field), field, "review"))
     return [problem_item_for_text(text, candidates) for text in selected]
+
+
+def sanitize_llm_problem_items(
+    parsed: dict[str, Any],
+    failed: list[dict[str, Any]],
+    review_pending: list[dict[str, Any]],
+    limit: int,
+) -> list[dict[str, Any]]:
+    raw_items = parsed.get("problem_items") or parsed.get("items") or []
+    if not isinstance(raw_items, list):
+        return []
+
+    failed_by_id = {str(field.get("id") or ""): field for field in failed if field.get("id")}
+    review_by_id = {str(field.get("id") or ""): field for field in review_pending if field.get("id")}
+    accepted: list[dict[str, Any]] = []
+    seen_fields: set[str] = set()
+    for raw_item in raw_items:
+        if len(accepted) >= limit:
+            break
+        if not isinstance(raw_item, dict):
+            continue
+        field_id = str(raw_item.get("field_id") or raw_item.get("id") or "").strip()
+        if not field_id or field_id in seen_fields:
+            continue
+        raw_kind = str(raw_item.get("kind") or "").strip().lower()
+        if field_id in failed_by_id:
+            if raw_kind in {"review", "review_pending", "needs_review"}:
+                continue
+            field = failed_by_id[field_id]
+            kind = "failure"
+            default_text = str(field.get("message") or "").strip()
+        elif field_id in review_by_id:
+            if raw_kind in {"failure", "fail", "failed"}:
+                continue
+            field = review_by_id[field_id]
+            kind = "review"
+            default_text = review_message(field)
+        else:
+            continue
+
+        text = str(raw_item.get("text") or raw_item.get("problem") or raw_item.get("message") or "").strip()
+        text = text or default_text
+        if not text:
+            continue
+        accepted.append(field_problem_item(text, field, kind))
+        seen_fields.add(field_id)
+    return accepted
 
 
 def problem_item_for_text(text: str, candidates: list[tuple[str, dict[str, Any], str]]) -> dict[str, Any]:
@@ -322,7 +374,11 @@ def build_triage_prompt(failed: list[dict[str, Any]], limit: int) -> str:
         "已 ROI 复核仍失败、ROI 因预算跳过、或规则虽通过但证据状态仍需复核的字段；"
         "数字、日期、执照号、授权号、签名优先。低风险或重复问题可以合并或暂不展示。"
         "review_pending 不是规则失败，措辞必须使用“需复核”而不是“不合规”。输出严格 JSON："
-        '{"problems":["短问题1"],"reason":"选择理由"}。'
+        '{"problems":["短问题1"],'
+        '"problem_items":[{"field_id":"字段id","kind":"failure或review","text":"短问题1"}],'
+        '"reason":"选择理由"}。'
+        "problem_items.field_id 必须来自输入 payload 的 id；failure 只能用于 kind=failure 的字段，"
+        "review 只能用于 kind=review_pending 的字段。"
         f"失败字段: {json.dumps(payload, ensure_ascii=False)}"
     )
 
