@@ -781,10 +781,11 @@
       fieldTable.querySelectorAll('.field-row').forEach(row => {
         row.addEventListener('click', () => selectField(row.dataset.id));
       });
-      problems.innerHTML = (report.problems || []).map((p) => {
-        const field = findProblemField(p, report.fields);
-        const kind = field?.passed && field?.needs_review ? 'review' : 'failure';
-        return `<li class="${kind === 'review' ? 'review' : ''}" data-id="${field?.id || ''}">${escapeHtml(p)}</li>`;
+      const problemItems = normalizedProblemItems(report);
+      problems.innerHTML = problemItems.map((item) => {
+        const field = item.field_id ? report.fields.find(f => f.id === item.field_id) : findProblemField(item.text, report.fields);
+        const kind = item.kind || (field?.passed && field?.needs_review ? 'review' : 'failure');
+        return `<li class="${kind === 'review' ? 'review' : ''}" data-id="${field?.id || ''}">${escapeHtml(item.text)}</li>`;
       }).join('');
       problems.querySelectorAll('li').forEach(item => {
         item.addEventListener('click', () => {
@@ -796,6 +797,17 @@
         const initial = report.fields.find(f => !f.passed) || report.fields.find(f => f.needs_review) || report.fields[0];
         selectField(initial.id);
       }
+    }
+
+    function normalizedProblemItems(report) {
+      if (Array.isArray(report.problem_items) && report.problem_items.length) {
+        return report.problem_items.map(item => ({
+          text: item.text || '',
+          field_id: item.field_id || '',
+          kind: item.kind || ''
+        })).filter(item => item.text);
+      }
+      return (report.problems || []).map(text => ({ text, field_id: '', kind: '' }));
     }
 
     function renderImageEvidence(report) {

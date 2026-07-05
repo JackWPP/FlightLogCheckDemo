@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from formcheck.issue_triage import build_triage_prompt, evidence_state, fallback_triage, issue_risk_level, triage_issues
+from formcheck.issue_triage import (
+    build_triage_prompt,
+    evidence_state,
+    fallback_triage,
+    issue_risk_level,
+    problem_items_for_selected,
+    triage_issues,
+)
 
 
 def test_issue_triage_fallback_limits_display_and_keeps_all(monkeypatch) -> None:
@@ -16,6 +23,8 @@ def test_issue_triage_fallback_limits_display_and_keeps_all(monkeypatch) -> None
     assert result["all_problems"] == ["地点不是重庆", "执照号不合规", "日期不是今天"]
     assert len(result["problems"]) == 2
     assert set(result["problems"]) == {"执照号不合规", "日期不是今天"}
+    assert {item["field_id"] for item in result["problem_items"]} == {"license", "date"}
+    assert all(item["kind"] == "failure" for item in result["problem_items"])
     assert result["issue_triage"]["suppressed"]
 
 
@@ -23,6 +32,7 @@ def test_fallback_triage_returns_pass_when_no_failures() -> None:
     result = fallback_triage([], [], 4)
 
     assert result["problems"] == ["通过"]
+    assert result["problem_items"] == []
     assert result["all_problems"] == []
     assert result["review_problems"] == []
 
@@ -46,6 +56,8 @@ def test_issue_triage_surfaces_review_pending_fields_without_failed_rules(monkey
     assert result["all_problems"] == []
     assert result["review_problems"] == ["23 APU累计使用循环需复核：存在相近数字候选，等待ROI复核"]
     assert result["problems"] == ["23 APU累计使用循环需复核：存在相近数字候选，等待ROI复核"]
+    assert result["problem_items"][0]["field_id"] == "apu_cum_cycles"
+    assert result["problem_items"][0]["kind"] == "review"
     assert result["issue_triage"]["selected_review"] == result["review_problems"]
 
 
@@ -74,7 +86,27 @@ def test_issue_triage_uses_remaining_slots_for_review_pending_fields(monkeypatch
 
     assert result["all_problems"] == ["执照号不合规"]
     assert result["problems"] == ["执照号不合规", "23 APU累计使用循环需复核：ROI复核未通过"]
+    assert [item["field_id"] for item in result["problem_items"]] == ["license", "apu_cum_cycles"]
+    assert [item["kind"] for item in result["problem_items"]] == ["failure", "review"]
     assert result["issue_triage"]["selected_review"] == ["23 APU累计使用循环需复核：ROI复核未通过"]
+
+
+def test_problem_items_map_paraphrased_text_by_field_label() -> None:
+    fields = [
+        {
+            "id": "apu_cum_cycles",
+            "label": "23 APU累计使用循环",
+            "validator": "number_less_than",
+            "message": "APU循环不小于99999",
+            "passed": True,
+            "needs_review": True,
+        }
+    ]
+
+    items = problem_items_for_selected(["APU累计使用循环需要人工确认"], [], fields)
+
+    assert items[0]["field_id"] == "apu_cum_cycles"
+    assert items[0]["kind"] == "review"
 
 
 def test_issue_triage_skips_llm_when_cleaner_failed(monkeypatch) -> None:

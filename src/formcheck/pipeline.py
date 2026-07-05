@@ -213,6 +213,7 @@ def analyze_image(
     report = {
         "ok": not all_problems,
         "problems": problems or ["通过"],
+        "problem_items": issue_result.get("problem_items", []),
         "all_problems": all_problems,
         "review_problems": issue_result.get("review_problems", []),
         "issue_triage": issue_result["issue_triage"],

@@ -36,6 +36,7 @@ def triage_issues(
     if not failed and not review_pending:
         return {
             "problems": ["通过"],
+            "problem_items": [],
             "all_problems": [],
             "review_problems": [],
             "issue_triage": {
@@ -88,11 +89,13 @@ def triage_issues(
         parsed = parse_json_content(content)
         selected = [str(item) for item in parsed.get("problems", []) if str(item).strip()]
         selected = selected[:limit] or fallback["problems"]
+        problem_items = problem_items_for_selected(selected, failed, review_pending)
         suppressed = [item for item in all_problems if item not in selected]
         review_problems = [review_message(field) for field in review_pending]
         suppressed_review = [item for item in review_problems if item not in selected]
         return {
             "problems": selected,
+            "problem_items": problem_items,
             "all_problems": all_problems,
             "review_problems": review_problems,
             "issue_triage": {
@@ -130,12 +133,15 @@ def fallback_triage(
     review_problems = [review_message(field) for field in ranked_review]
     if len(selected) < limit:
         selected.extend(review_problems[: limit - len(selected)])
+    problem_items = problem_items_for_selected(selected, failed, review_pending)
     suppressed = [item for item in all_problems if item not in selected]
     suppressed_review = [item for item in review_problems if item not in selected]
     if (suppressed or suppressed_review) and len(selected) < limit:
         selected.append("若干字段需复核")
+        problem_items.append(summary_problem_item("若干字段需复核"))
     return {
         "problems": selected or ["通过"],
+        "problem_items": problem_items,
         "all_problems": all_problems,
         "review_problems": review_problems,
         "issue_triage": {
@@ -157,6 +163,65 @@ def review_message(field: dict[str, Any]) -> str:
     if reason and reason not in {"需人工复核", "needs_review"}:
         return f"{label}需复核：{reason}"
     return f"{label}需复核"
+
+
+def problem_items_for_selected(
+    selected: list[str],
+    failed: list[dict[str, Any]],
+    review_pending: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    candidates: list[tuple[str, dict[str, Any], str]] = []
+    for field in failed:
+        message = str(field.get("message") or "")
+        if message:
+            candidates.append((message, field, "failure"))
+    for field in review_pending:
+        candidates.append((review_message(field), field, "review"))
+    return [problem_item_for_text(text, candidates) for text in selected]
+
+
+def problem_item_for_text(text: str, candidates: list[tuple[str, dict[str, Any], str]]) -> dict[str, Any]:
+    normalized = normalize_problem_text(text)
+    for candidate_text, field, kind in candidates:
+        candidate_norm = normalize_problem_text(candidate_text)
+        if normalized == candidate_norm or (candidate_norm and (normalized in candidate_norm or candidate_norm in normalized)):
+            return field_problem_item(text, field, kind)
+    for _candidate_text, field, kind in candidates:
+        label = normalize_problem_text(str(field.get("label") or ""))
+        label_without_number = normalize_problem_text(strip_leading_index(str(field.get("label") or "")))
+        if (label and label in normalized) or (label_without_number and label_without_number in normalized):
+            return field_problem_item(text, field, kind)
+    return summary_problem_item(text)
+
+
+def field_problem_item(text: str, field: dict[str, Any], kind: str) -> dict[str, Any]:
+    return {
+        "text": text,
+        "field_id": field.get("id") or "",
+        "label": field.get("label") or "",
+        "kind": kind,
+        "risk_level": issue_risk_level(field),
+        "evidence_state": evidence_state(field),
+    }
+
+
+def summary_problem_item(text: str) -> dict[str, Any]:
+    return {
+        "text": text,
+        "field_id": "",
+        "label": "",
+        "kind": "summary",
+        "risk_level": "low",
+        "evidence_state": "summary",
+    }
+
+
+def normalize_problem_text(value: str) -> str:
+    return "".join(str(value or "").lower().split())
+
+
+def strip_leading_index(value: str) -> str:
+    return str(value or "").lstrip("0123456789. 、-")
 
 
 def should_skip_triage_for_cleaner_error(cleaner_meta: dict[str, Any] | None) -> bool:
