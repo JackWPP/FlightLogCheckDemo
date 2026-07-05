@@ -21,6 +21,18 @@ def test_regex_license() -> None:
     assert not validate(spec, RecognitionResult("CAAC123"))[0]
 
 
+def test_regex_license_extracts_from_neighbor_text() -> None:
+    spec = field("regex", {"pattern": r"^CAACML[0-9]{8}$"})
+    assert validate(spec, RecognitionResult("重庆 CAACML20198975"))[0]
+    assert not validate(spec, RecognitionResult("重庆 CAAC20198975"))[0]
+
+
+def test_regex_authorization_extracts_six_digit_number_from_mixed_text() -> None:
+    spec = field("regex", {"pattern": r"^[0-9]{6}$"})
+    assert validate(spec, RecognitionResult("2026.06.29 017867"))[0]
+    assert not validate(spec, RecognitionResult("2026.06.29"))[0]
+
+
 def test_same_day_injected() -> None:
     spec = field("same_day", {})
     assert validate(spec, RecognitionResult("2026.07.02"), now="2026-07-02")[0]

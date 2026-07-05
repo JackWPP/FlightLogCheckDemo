@@ -64,6 +64,23 @@ def normalize_date(value: str) -> str:
     return text
 
 
+def normalize_regex_value(pattern: str, value: str) -> str:
+    text = normalize_text(value)
+    compact = text.replace(" ", "").upper()
+    if pattern == r"^[0-9]{6}$":
+        candidates = re.findall(r"(?<!\d)(\d{6})(?!\d)", text)
+        if candidates:
+            return candidates[-1]
+    if pattern == r"^CAACML[0-9]{8}$":
+        valid = re.search(r"CAACML\d{8}", compact)
+        if valid:
+            return valid.group(0)
+        near = re.search(r"CAAC[A-Z]*\d{8}", compact)
+        if near:
+            return near.group(0)
+    return compact
+
+
 def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None = None) -> tuple[bool, str]:
     value = normalize_text(recognition.normalized_value or recognition.value)
     params = field.params
@@ -116,7 +133,7 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
         return any(upper.startswith(str(prefix).upper()) for prefix in params.get("prefixes", [])), field.fail_msg
 
     if validator == "regex":
-        compact = value.replace(" ", "").upper()
+        compact = normalize_regex_value(str(params["pattern"]), value)
         return bool(re.fullmatch(params["pattern"], compact)), field.fail_msg
 
     if validator == "same_day":

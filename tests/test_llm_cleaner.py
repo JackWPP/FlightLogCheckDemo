@@ -101,6 +101,23 @@ def test_normalize_for_field_station_and_na_variants() -> None:
     assert normalize_for_field(ref, "N-A") == "N/A"
 
 
+def test_normalize_for_field_extracts_regex_subvalues() -> None:
+    auth = FieldSpec("auth", "授权号", "s", (0, 0, 1, 1), "keyed_text", "regex", {"pattern": r"^[0-9]{6}$"}, "fail")
+    license_field = FieldSpec(
+        "license",
+        "执照号",
+        "s",
+        (0, 0, 1, 1),
+        "keyed_text",
+        "regex",
+        {"pattern": r"^CAACML[0-9]{8}$"},
+        "fail",
+    )
+
+    assert normalize_for_field(auth, "2026.06.29 017867") == "017867"
+    assert normalize_for_field(license_field, "重庆 CAACML20198975") == "CAACML20198975"
+
+
 def test_cleaner_timeout_fallback_is_cached(tmp_path, monkeypatch) -> None:
     field = FieldSpec(
         id="fault_ref",

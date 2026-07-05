@@ -13,6 +13,7 @@ FORM_LABEL_TOKENS = [
     "REPORT/WORK",
     "AUTHORIZATION NO",
     "SERVICE COMPLETED",
+    "AIRWORTHINESS RELEASE",
     "DEFERRED ITEM",
     "DEFER NO",
     "RELEASE SIGN",
@@ -33,6 +34,8 @@ FORM_LABEL_TOKENS = [
     "保留项目",
     "放行签署",
     "执照号",
+    "是否有保",
+    "是否有保留",
     "日期",
     "地点",
     "参考手册",
@@ -72,7 +75,42 @@ def assign_blocks_to_fields(
                 scored.append(FieldCandidate(field.id, block, score, reason))
         scored.sort(key=lambda item: item.score, reverse=True)
         assignments[field.id] = scored[:max_candidates]
+    resolve_candidate_conflicts(assignments, {field.id: field for field in fields}, max_candidates)
     return assignments
+
+
+def resolve_candidate_conflicts(
+    assignments: dict[str, list[FieldCandidate]],
+    fields_by_id: dict[str, FieldSpec],
+    max_candidates: int,
+) -> None:
+    """Keep one OCR block from becoming the primary evidence for unrelated fields."""
+    for _ in range(3):
+        primary_by_block: dict[str, list[FieldCandidate]] = {}
+        for field_id, candidates in assignments.items():
+            field = fields_by_id[field_id]
+            if not candidates or allow_shared_primary(field):
+                continue
+            primary_by_block.setdefault(candidates[0].block.id, []).append(candidates[0])
+
+        changed = False
+        for shared in primary_by_block.values():
+            if len(shared) <= 1:
+                continue
+            shared.sort(key=lambda candidate: candidate.score, reverse=True)
+            keep = shared[0]
+            for candidate in shared[1:]:
+                field_candidates = assignments[candidate.field_id]
+                assignments[candidate.field_id] = [
+                    item for item in field_candidates if item.block.id != keep.block.id
+                ][:max_candidates]
+                changed = True
+        if not changed:
+            break
+
+
+def allow_shared_primary(field: FieldSpec) -> bool:
+    return field.validator in {"bilingual_text", "english_text"}
 
 
 def estimate_ocr_page_size(blocks: list[OcrBlock], canonical_size: tuple[int, int]) -> tuple[float, float]:
@@ -139,11 +177,19 @@ def incompatible_value(field: FieldSpec, text: str) -> bool:
     upper = compact.upper()
     value_type = field.assignment.get("value_type")
     if value_type in {"signature"}:
-        return label_noise(field, text)
+        return (
+            label_noise(field, text)
+            or is_station_value(text)
+            or is_date_like(text)
+            or is_numeric_value(text)
+            or is_release_statement(text)
+        )
     if value_type in {"authorization"}:
-        return not bool(re.search(r"\d{4,6}", upper))
+        return not bool(extract_authorization_value(text))
     if value_type in {"license"}:
         return not bool(re.search(r"CA|CAA|CAAC|CAACML|\d{4,8}", upper))
+    if value_type in {"text"}:
+        return is_station_value(text) or is_date_like(text)
     if field.validator in {"int_range", "digit_length", "number_less_than"}:
         return not bool(re.fullmatch(r"\d+(?:\.\d+)?", compact))
     if field.validator == "same_day":
@@ -166,6 +212,33 @@ def incompatible_value(field: FieldSpec, text: str) -> bool:
         normalized = normalized_compact(text).upper()
         return normalized not in allowed
     return False
+
+
+def is_station_value(text: str) -> bool:
+    normalized = normalize_exact_value(text)
+    return normalized == "重庆"
+
+
+def is_date_like(text: str) -> bool:
+    compact = compact_text(text)
+    return bool(
+        re.fullmatch(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", compact)
+        or re.fullmatch(r"20\d{6}", compact)
+    )
+
+
+def is_numeric_value(text: str) -> bool:
+    return bool(re.fullmatch(r"\d+(?:\.\d+)?", compact_text(text)))
+
+
+def is_release_statement(text: str) -> bool:
+    upper = text.upper()
+    return "CONSIDERED FIT FOR RELEASE" in upper or "适合飞行" in text or "满足适航要求" in text
+
+
+def extract_authorization_value(text: str) -> str:
+    candidates = re.findall(r"(?<!\d)(\d{6})(?!\d)", text)
+    return candidates[-1] if candidates else ""
 
 
 def label_noise(field: FieldSpec, text: str) -> bool:
@@ -268,9 +341,9 @@ def pattern_score(field: FieldSpec, text: str) -> float:
         return 0.6 if compact and normalized != "重庆" else 0.0
     value_type = field.assignment.get("value_type")
     if value_type == "signature":
-        return 0.55 if not label_noise(field, text) else 0.0
+        return 0.55 if not incompatible_value(field, text) else 0.0
     if value_type == "authorization":
-        return 0.8 if re.fullmatch(r"\d{4,6}", compact) else 0.0
+        return 0.8 if extract_authorization_value(text) else 0.0
     if value_type == "license":
         if upper.startswith("CAACML") or upper.startswith("CAAC"):
             return 0.8

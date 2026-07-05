@@ -998,7 +998,7 @@
           return msg && (text.includes(msg) || msg.includes(text));
         })
         || fields.find(field => {
-          const label = normalizeProblemText(field.label);
+          const label = normalizeFieldLabel(field.label);
           return label && (text.includes(label) || label.includes(text));
         })
         || fields.find(field => !field.passed && hasSharedProblemToken(text, field))
@@ -1006,12 +1006,16 @@
     }
 
     function hasSharedProblemToken(text, field) {
-      const haystack = normalizeProblemText(`${field.label} ${field.message}`);
-      const tokens = ['授权号', '日期', '执照号', 'APU', '循环', '时间', '签名', '地点', '报告人', '航班号', '英文', '参考手册', '保留项目'];
+      const haystack = normalizeProblemText(`${normalizeFieldLabel(field.label)} ${field.message}`);
+      const tokens = ['授权号', '日期', '执照号', 'APU', '循环', '时间', '签名', '放行签署', '地点', '报告人', '航班号', '英文', '参考手册', '保留项目', '滑油量', '加注量', '发动机1', '发动机2'];
       return tokens.some(token => {
         const normalized = normalizeProblemText(token);
         return text.includes(normalized) && haystack.includes(normalized);
       });
+    }
+
+    function normalizeFieldLabel(value) {
+      return normalizeProblemText(value).replace(/^\d+/, '');
     }
 
     function normalizeProblemText(value) {

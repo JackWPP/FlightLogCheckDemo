@@ -144,3 +144,119 @@ def test_bilingual_assignment_filters_form_labels_before_body() -> None:
         "完成飞机遭鸟击后的检查，检查正常",
         "Finished the inspection after a Bird strike. check o/k",
     ]
+
+
+def test_signature_rejects_station_and_release_statement() -> None:
+    field = FieldSpec(
+        id="action_release_sign",
+        label="处理措施-放行签署",
+        section="fault_action",
+        bbox=(0, 0, 240, 100),
+        recognizer="signature_or_text",
+        validator="name_not_place",
+        params={"not_allow": ["重庆", "渝", "Chongqing"]},
+        fail_msg="fail",
+        assignment={"value_type": "signature"},
+    )
+    station = OcrBlock("station", "重庆", 0.99, (20, 10, 80, 60), (50, 35))
+    statement = OcrBlock(
+        "statement",
+        "飞机技术状态满足适航要求，适合飞行，The A/C is considered fit for Release to Service",
+        0.99,
+        (20, 10, 220, 60),
+        (120, 35),
+    )
+    name = OcrBlock("name", "李冬", 0.9, (110, 10, 170, 60), (140, 35))
+
+    assignments = assign_blocks_to_fields([field], [station, statement, name], (240, 100))
+
+    assert [candidate.block.text for candidate in assignments[field.id]] == ["李冬"]
+
+
+def test_authorization_rejects_date_candidate() -> None:
+    field = FieldSpec(
+        id="action_authorization",
+        label="授权号",
+        section="fault_action",
+        bbox=(0, 0, 260, 100),
+        recognizer="keyed_text",
+        validator="regex",
+        params={"pattern": "^[0-9]{6}$"},
+        fail_msg="fail",
+        assignment={"value_type": "authorization"},
+    )
+    date = OcrBlock("date", "2026.06.29", 0.99, (20, 10, 170, 60), (95, 35))
+    auth = OcrBlock("auth", "017867", 0.88, (170, 10, 250, 60), (210, 35))
+
+    assignments = assign_blocks_to_fields([field], [date, auth], (260, 100))
+
+    assert assignments[field.id][0].block.text == "017867"
+    assert "2026.06.29" not in [candidate.block.text for candidate in assignments[field.id]]
+
+
+def test_authorization_accepts_mixed_text_when_six_digit_value_exists() -> None:
+    field = FieldSpec(
+        id="action_authorization",
+        label="授权号",
+        section="fault_action",
+        bbox=(0, 0, 260, 100),
+        recognizer="keyed_text",
+        validator="regex",
+        params={"pattern": "^[0-9]{6}$"},
+        fail_msg="fail",
+        assignment={"value_type": "authorization"},
+    )
+    mixed = OcrBlock("mixed", "2026.06.29 017867", 0.99, (20, 10, 250, 60), (135, 35))
+
+    assignments = assign_blocks_to_fields([field], [mixed], (260, 100))
+
+    assert assignments[field.id][0].block.text == "2026.06.29 017867"
+
+
+def test_text_field_rejects_station_only_candidate() -> None:
+    field = FieldSpec(
+        id="action_installed_part_info",
+        label="安装件信息",
+        section="fault_action",
+        bbox=(0, 0, 200, 100),
+        recognizer="keyed_text",
+        validator="present",
+        params={},
+        fail_msg="fail",
+        assignment={"value_type": "text"},
+    )
+    station = OcrBlock("station", "重庆", 0.99, (20, 10, 80, 60), (50, 35))
+
+    assignments = assign_blocks_to_fields([field], [station], (200, 100))
+
+    assert assignments[field.id] == []
+
+
+def test_shared_primary_block_is_kept_for_best_matching_field_only() -> None:
+    station_field = FieldSpec(
+        id="action_station",
+        label="处理地点",
+        section="fault_action",
+        bbox=(0, 0, 120, 80),
+        recognizer="keyed_text",
+        validator="exact_text",
+        params={"allow": ["重庆", "渝", "Chongqing"]},
+        fail_msg="fail",
+    )
+    sign_field = FieldSpec(
+        id="action_release_sign",
+        label="放行签署",
+        section="fault_action",
+        bbox=(0, 0, 120, 80),
+        recognizer="signature_or_text",
+        validator="name_not_place",
+        params={"not_allow": ["重庆", "渝", "Chongqing"]},
+        fail_msg="fail",
+        assignment={"value_type": "signature"},
+    )
+    station = OcrBlock("station", "重庆", 0.99, (10, 10, 90, 60), (50, 35))
+
+    assignments = assign_blocks_to_fields([station_field, sign_field], [station], (120, 80))
+
+    assert assignments[station_field.id][0].block.text == "重庆"
+    assert assignments[sign_field.id] == []

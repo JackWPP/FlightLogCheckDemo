@@ -14,7 +14,7 @@ import requests
 from .config import FIELDS_PATH, OUTPUTS_DIR, provider_config
 from .field_assignment import candidates_to_json, looks_like_form_label_text
 from .schemas import FieldCandidate, FieldSpec, RecognitionResult
-from .validators import compact_text, normalize_date, normalize_exact_value, normalize_na, today_str
+from .validators import compact_text, normalize_date, normalize_exact_value, normalize_na, normalize_regex_value, today_str
 
 
 DEFAULT_CLEANER_MODEL = "deepseek-ai/DeepSeek-V4-Flash"
@@ -502,7 +502,7 @@ def normalize_for_field(field: FieldSpec, value: str) -> str:
         na = normalize_na(text)
         return "N/A" if na == "N/A" else compact_text(text).upper()
     if field.validator == "regex":
-        return text.replace(" ", "").upper()
+        return normalize_regex_value(str(field.params.get("pattern", "")), text)
     if field.validator == "same_day":
         return normalize_date(text)
     if field.validator in {"digit_length", "number_less_than"}:
