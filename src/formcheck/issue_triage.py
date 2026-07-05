@@ -139,16 +139,60 @@ def should_skip_triage_for_cleaner_error(cleaner_meta: dict[str, Any] | None) ->
 
 
 def issue_priority(field: dict[str, Any]) -> tuple[int, str]:
+    return (-issue_risk_score(field), str(field.get("label") or ""))
+
+
+def issue_risk_score(field: dict[str, Any]) -> int:
     validator = str(field.get("validator") or "")
     recognizer = str(field.get("recognizer") or "")
     label = str(field.get("label") or "")
+    score = 0
     if validator in {"regex", "digit_length", "same_day", "number_less_than"}:
-        return (0, label)
+        score += 80
+    elif validator == "int_range":
+        score += 70
+    elif validator in {"exact_text", "exact_text_or_ocr_match", "name_not_place"}:
+        score += 45
     if "签" in label or recognizer == "signature_or_text":
-        return (1, label)
-    if validator in {"exact_text", "exact_text_or_ocr_match", "name_not_place"}:
-        return (2, label)
-    return (3, label)
+        score += 60
+    if any(term in label for term in ("授权号", "执照号", "APU", "滑油", "日期")):
+        score += 35
+    if field.get("needs_review"):
+        score += 12
+    raw = field.get("raw") if isinstance(field.get("raw"), dict) else {}
+    if raw.get("roi_review"):
+        score += 20
+    if raw.get("roi_review_skipped"):
+        score += 18
+    return score
+
+
+def issue_risk_level(field: dict[str, Any]) -> str:
+    score = issue_risk_score(field)
+    if score >= 130:
+        return "high"
+    if score >= 80:
+        return "medium"
+    return "low"
+
+
+def evidence_state(field: dict[str, Any]) -> str:
+    raw = field.get("raw") if isinstance(field.get("raw"), dict) else {}
+    if raw.get("roi_review"):
+        return "roi_reviewed"
+    if raw.get("roi_review_skipped"):
+        return "roi_review_skipped"
+    if field.get("needs_review"):
+        return "needs_review"
+    if field.get("confidence") is not None:
+        return "ocr_cleaned"
+    return "unknown"
+
+
+def review_state(field: dict[str, Any]) -> str:
+    if field.get("needs_review"):
+        return str(field.get("review_reason") or "needs_review")
+    return "not_requested"
 
 
 def build_triage_prompt(failed: list[dict[str, Any]], limit: int) -> str:
@@ -160,16 +204,19 @@ def build_triage_prompt(failed: list[dict[str, Any]], limit: int) -> str:
             "value": field.get("normalized_value") or field.get("value"),
             "validator": field.get("validator"),
             "confidence": field.get("confidence"),
-            "needs_review": field.get("needs_review"),
             "source": field.get("source_label"),
-            "review_reason": field.get("review_reason"),
+            "risk_level": issue_risk_level(field),
+            "risk_score": issue_risk_score(field),
+            "evidence_state": evidence_state(field),
+            "review_state": review_state(field),
         }
         for field in failed
     ]
     return (
         "你是飞行记录单审核助手。目标是减轻人工审核压力。"
         "请从全部规则失败中挑出最值得展示给审核员的少量问题，不要改变规则结果。"
-        f"最多输出 {limit} 条问题。优先展示数字、日期、执照号、授权号、签名等高风险问题；"
+        f"最多输出 {limit} 条问题。优先展示 risk_level=high、risk_score 高、"
+        "已 ROI 复核仍失败或 ROI 因预算跳过的字段；数字、日期、执照号、授权号、签名优先。"
         "低风险或重复问题可以合并或暂不展示。输出严格 JSON："
         '{"problems":["短问题1"],"reason":"选择理由"}。'
         f"失败字段: {json.dumps(payload, ensure_ascii=False)}"
