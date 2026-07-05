@@ -75,6 +75,7 @@ def demo_payload() -> dict[str, Any]:
     triage = triage_issues(report.get("fields", []), provider="mock")
     report["all_problems"] = triage["all_problems"]
     report["problems"] = triage["problems"]
+    report["review_problems"] = triage.get("review_problems", [])
     report["issue_triage"] = triage["issue_triage"]
     return {"manifest": build_manifest(), "report": report}
 

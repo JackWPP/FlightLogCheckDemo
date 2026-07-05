@@ -29,19 +29,23 @@ def triage_issues(
 ) -> dict[str, Any]:
     started = time.time()
     failed = [field for field in fields if not field.get("passed")]
+    review_pending = [field for field in fields if field.get("passed") and field.get("needs_review")]
     all_problems = [field.get("message") for field in failed if field.get("message")]
     limit = issue_display_limit()
-    fallback = fallback_triage(failed, all_problems, limit)
-    if not failed:
+    fallback = fallback_triage(failed, all_problems, limit, review_pending)
+    if not failed and not review_pending:
         return {
             "problems": ["通过"],
             "all_problems": [],
+            "review_problems": [],
             "issue_triage": {
                 "provider": "local",
                 "model": "none",
                 "limit": limit,
                 "selected": [],
                 "suppressed": [],
+                "selected_review": [],
+                "suppressed_review": [],
                 "reason": "no_failed_fields",
                 "duration_ms": int((time.time() - started) * 1000),
             },
@@ -63,7 +67,7 @@ def triage_issues(
         fallback["issue_triage"]["model"] = selected_model
         return fallback
 
-    prompt = build_triage_prompt(failed, limit)
+    prompt = build_triage_prompt(failed + review_pending, limit)
     payload = {
         "model": selected_model,
         "messages": [{"role": "user", "content": prompt}],
@@ -85,15 +89,20 @@ def triage_issues(
         selected = [str(item) for item in parsed.get("problems", []) if str(item).strip()]
         selected = selected[:limit] or fallback["problems"]
         suppressed = [item for item in all_problems if item not in selected]
+        review_problems = [review_message(field) for field in review_pending]
+        suppressed_review = [item for item in review_problems if item not in selected]
         return {
             "problems": selected,
             "all_problems": all_problems,
+            "review_problems": review_problems,
             "issue_triage": {
                 "provider": cfg.name,
                 "model": selected_model,
                 "limit": limit,
                 "selected": selected,
                 "suppressed": suppressed,
+                "selected_review": [item for item in selected if item in review_problems],
+                "suppressed_review": suppressed_review,
                 "reason": parsed.get("reason", ""),
                 "raw": {"content": content, "usage": data.get("usage")},
                 "duration_ms": int((time.time() - started) * 1000),
@@ -107,25 +116,47 @@ def triage_issues(
         return fallback
 
 
-def fallback_triage(failed: list[dict[str, Any]], all_problems: list[str], limit: int) -> dict[str, Any]:
-    ranked = sorted(failed, key=lambda field: issue_priority(field))
-    selected = [field.get("message") for field in ranked if field.get("message")]
+def fallback_triage(
+    failed: list[dict[str, Any]],
+    all_problems: list[str],
+    limit: int,
+    review_pending: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    review_pending = review_pending or []
+    ranked_failed = sorted(failed, key=lambda field: issue_priority(field))
+    ranked_review = sorted(review_pending, key=lambda field: issue_priority(field))
+    selected = [field.get("message") for field in ranked_failed if field.get("message")]
     selected = [str(item) for item in selected[:limit]]
+    review_problems = [review_message(field) for field in ranked_review]
+    if len(selected) < limit:
+        selected.extend(review_problems[: limit - len(selected)])
     suppressed = [item for item in all_problems if item not in selected]
-    if suppressed and len(selected) < limit:
+    suppressed_review = [item for item in review_problems if item not in selected]
+    if (suppressed or suppressed_review) and len(selected) < limit:
         selected.append("若干字段需复核")
     return {
         "problems": selected or ["通过"],
         "all_problems": all_problems,
+        "review_problems": review_problems,
         "issue_triage": {
             "provider": "local:fallback",
             "model": "priority",
             "limit": limit,
             "selected": selected,
             "suppressed": suppressed,
+            "selected_review": [item for item in selected if item in review_problems],
+            "suppressed_review": suppressed_review,
             "reason": "本地优先级兜底",
         },
     }
+
+
+def review_message(field: dict[str, Any]) -> str:
+    label = str(field.get("label") or field.get("id") or "字段").strip()
+    reason = str(field.get("review_reason") or "").strip()
+    if reason and reason not in {"需人工复核", "needs_review"}:
+        return f"{label}需复核：{reason}"
+    return f"{label}需复核"
 
 
 def should_skip_triage_for_cleaner_error(cleaner_meta: dict[str, Any] | None) -> bool:
@@ -200,7 +231,8 @@ def build_triage_prompt(failed: list[dict[str, Any]], limit: int) -> str:
         {
             "id": field.get("id"),
             "label": field.get("label"),
-            "message": field.get("message"),
+            "kind": "failure" if not field.get("passed") else "review_pending",
+            "message": field.get("message") if not field.get("passed") else review_message(field),
             "value": field.get("normalized_value") or field.get("value"),
             "validator": field.get("validator"),
             "confidence": field.get("confidence"),
@@ -214,10 +246,11 @@ def build_triage_prompt(failed: list[dict[str, Any]], limit: int) -> str:
     ]
     return (
         "你是飞行记录单审核助手。目标是减轻人工审核压力。"
-        "请从全部规则失败中挑出最值得展示给审核员的少量问题，不要改变规则结果。"
+        "请从全部规则失败和高风险复核项中挑出最值得展示给审核员的少量问题，不要改变规则结果。"
         f"最多输出 {limit} 条问题。优先展示 risk_level=high、risk_score 高、"
-        "已 ROI 复核仍失败或 ROI 因预算跳过的字段；数字、日期、执照号、授权号、签名优先。"
-        "低风险或重复问题可以合并或暂不展示。输出严格 JSON："
+        "已 ROI 复核仍失败、ROI 因预算跳过、或规则虽通过但证据状态仍需复核的字段；"
+        "数字、日期、执照号、授权号、签名优先。低风险或重复问题可以合并或暂不展示。"
+        "review_pending 不是规则失败，措辞必须使用“需复核”而不是“不合规”。输出严格 JSON："
         '{"problems":["短问题1"],"reason":"选择理由"}。'
         f"失败字段: {json.dumps(payload, ensure_ascii=False)}"
     )

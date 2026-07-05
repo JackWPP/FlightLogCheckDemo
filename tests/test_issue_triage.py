@@ -24,6 +24,57 @@ def test_fallback_triage_returns_pass_when_no_failures() -> None:
 
     assert result["problems"] == ["通过"]
     assert result["all_problems"] == []
+    assert result["review_problems"] == []
+
+
+def test_issue_triage_surfaces_review_pending_fields_without_failed_rules(monkeypatch) -> None:
+    monkeypatch.setenv("ISSUE_DISPLAY_LIMIT", "2")
+    fields = [
+        {
+            "id": "apu_cum_cycles",
+            "label": "23 APU累计使用循环",
+            "validator": "number_less_than",
+            "message": "APU循环不小于99999",
+            "passed": True,
+            "needs_review": True,
+            "review_reason": "存在相近数字候选，等待ROI复核",
+        }
+    ]
+
+    result = triage_issues(fields, provider="mock")
+
+    assert result["all_problems"] == []
+    assert result["review_problems"] == ["23 APU累计使用循环需复核：存在相近数字候选，等待ROI复核"]
+    assert result["problems"] == ["23 APU累计使用循环需复核：存在相近数字候选，等待ROI复核"]
+    assert result["issue_triage"]["selected_review"] == result["review_problems"]
+
+
+def test_issue_triage_uses_remaining_slots_for_review_pending_fields(monkeypatch) -> None:
+    monkeypatch.setenv("ISSUE_DISPLAY_LIMIT", "2")
+    fields = [
+        {
+            "id": "license",
+            "label": "29 适航放行-执照号",
+            "validator": "regex",
+            "message": "执照号不合规",
+            "passed": False,
+        },
+        {
+            "id": "apu_cum_cycles",
+            "label": "23 APU累计使用循环",
+            "validator": "number_less_than",
+            "message": "APU循环不小于99999",
+            "passed": True,
+            "needs_review": True,
+            "review_reason": "ROI复核未通过",
+        },
+    ]
+
+    result = triage_issues(fields, provider="mock")
+
+    assert result["all_problems"] == ["执照号不合规"]
+    assert result["problems"] == ["执照号不合规", "23 APU累计使用循环需复核：ROI复核未通过"]
+    assert result["issue_triage"]["selected_review"] == ["23 APU累计使用循环需复核：ROI复核未通过"]
 
 
 def test_issue_triage_skips_llm_when_cleaner_failed(monkeypatch) -> None:
@@ -71,6 +122,25 @@ def test_issue_triage_prompt_includes_risk_and_evidence_state() -> None:
     assert "ROI 因预算跳过" in prompt
     assert issue_risk_level(fields[0]) == "high"
     assert evidence_state(fields[0]) == "roi_review_skipped"
+
+
+def test_issue_triage_prompt_distinguishes_review_pending_from_failure() -> None:
+    fields = [
+        {
+            "id": "apu_cum_cycles",
+            "label": "23 APU累计使用循环",
+            "validator": "number_less_than",
+            "passed": True,
+            "needs_review": True,
+            "review_reason": "存在相近数字候选，等待ROI复核",
+        }
+    ]
+
+    prompt = build_triage_prompt(fields, 4)
+
+    assert '"kind": "review_pending"' in prompt
+    assert "需复核" in prompt
+    assert "不是规则失败" in prompt
 
 
 def test_fallback_triage_prefers_high_risk_review_skipped_item(monkeypatch) -> None:

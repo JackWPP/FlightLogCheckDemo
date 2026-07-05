@@ -742,8 +742,11 @@
       }
       mainImage.src = lastManifest?.images?.ocr || report.ocr?.ocr_image_url || report.warped_url || report.upload_url;
       renderImageEvidence(report);
+      const reviewHint = (report.review_problems || []).length
+        ? `有 ${report.review_problems.length} 个字段建议复核。`
+        : '未发现规则问题。';
       statusBox.innerHTML = report.ok
-        ? '<strong style="color: var(--good)">通过</strong><span class="meta">未发现规则问题。</span>'
+        ? `<strong style="color: var(--good)">通过</strong><span class="meta">${escapeHtml(reviewHint)}</span>`
         : `<strong style="color: var(--bad)">不通过</strong><span class="meta">点击问题查看对应裁切证据。${report.ocr?.error ? ' OCR: ' + escapeHtml(report.ocr.error) : ''}</span>`;
       renderSummary(report);
       document.getElementById('fieldCount').textContent = `${report.fields.length} 个字段`;

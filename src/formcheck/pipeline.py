@@ -214,6 +214,7 @@ def analyze_image(
         "ok": not all_problems,
         "problems": problems or ["通过"],
         "all_problems": all_problems,
+        "review_problems": issue_result.get("review_problems", []),
         "issue_triage": issue_result["issue_triage"],
         "summary": build_summary(field_dicts, ocr_meta["public"], review_plan),
         "review_plan": review_plan,
