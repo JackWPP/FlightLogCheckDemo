@@ -49,6 +49,7 @@ copy .env.example .env
 - `ALIYUN_API_KEY`：ROI 级视觉复核，默认建议使用图像 OCR 模型 `qwen3.5-ocr`。
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型；若主模型超时或报错，可通过 `ROI_REVIEW_FALLBACK_MODEL` 自动降级。
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
+- `ROI_REVIEW_MAX_FIELDS`：单张表最多实时复核的 ROI 数，默认 `12`，`0` 表示不限制；超过预算的低优先级字段会保留人工复核证据，不阻塞整张单。
 - `CLEANER_SECTION_TIMEOUT_SECONDS` / `CLEANER_TOTAL_BUDGET_SECONDS`：Cleaner 分区请求超时与总预算，默认 `75` / `90`。
 - `ISSUE_TRIAGE_TIMEOUT_SECONDS`：问题终裁超时，默认 `45`。
 - `ISSUE_DISPLAY_LIMIT`：右侧展示问题数量上限，默认 `4`；`all_problems` 不受影响。

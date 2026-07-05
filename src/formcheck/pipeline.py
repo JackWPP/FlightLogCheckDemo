@@ -159,13 +159,22 @@ def analyze_image(
     timings["validate_ms"] = int((time.time() - t) * 1000)
 
     # --- Stage 4: ROI-VLM review (prefer PaddleOCR ROI evidence) -----------
-    needs_review = [
+    reviewable_checks = [
         c for c in checks
         if should_roi_review(c.field, c.recognition, c.passed, mode) and (ppocr_roi_paths.get(c.field.id) or warped is not None)
     ]
+    needs_review, skipped_review = select_roi_reviews(reviewable_checks)
+    for check in skipped_review:
+        check.recognition.needs_review = True
+        check.recognition.review_reason = check.recognition.review_reason or "超过ROI复核预算，保留人工复核"
+        if isinstance(check.recognition.raw, dict):
+            check.recognition.raw["roi_review_skipped"] = {
+                "reason": "budget_exceeded",
+                "priority": roi_review_priority(check),
+            }
     if needs_review:
         t = time.time()
-        emit("review", "running", total=len(needs_review))
+        emit("review", "running", total=len(needs_review), skipped=len(skipped_review))
         with ThreadPoolExecutor(max_workers=roi_review_concurrency()) as pool:
             futures = {
                 pool.submit(review_check, c, run_dir, ppocr_roi_paths.get(c.field.id), warped): checks.index(c)
@@ -174,15 +183,18 @@ def analyze_image(
             for done_count, future in enumerate(as_completed(futures), start=1):
                 i = futures[future]
                 checks[i] = future.result()
-                emit("review", "running", total=len(needs_review), completed=done_count)
+                emit("review", "running", total=len(needs_review), completed=done_count, skipped=len(skipped_review))
         emit("review", "done",
              duration_ms=int((time.time() - t) * 1000),
-             total=len(needs_review))
+             total=len(needs_review),
+             skipped=len(skipped_review))
         timings["review_ms"] = int((time.time() - t) * 1000)
     else:
         reason = "no_roi_evidence" if warped is None and not ppocr_roi_paths else "no_fields"
-        emit("review", "skipped", total=0, reason=reason)
+        emit("review", "skipped", total=0, skipped=len(skipped_review), reason=reason)
         timings["review_ms"] = 0
+    timings["review_selected_count"] = len(needs_review)
+    timings["review_skipped_count"] = len(skipped_review)
 
     # --- Build report ------------------------------------------------------
     field_dicts = [_check_dict(check) for check in checks]
@@ -225,6 +237,43 @@ def roi_review_concurrency() -> int:
         return max(1, min(6, int(os.getenv("ROI_REVIEW_CONCURRENCY", "3"))))
     except ValueError:
         return 3
+
+
+def roi_review_max_fields() -> int:
+    try:
+        value = int(os.getenv("ROI_REVIEW_MAX_FIELDS", "12"))
+    except ValueError:
+        return 12
+    return max(0, min(29, value))
+
+
+def select_roi_reviews(checks: list[FieldCheck]) -> tuple[list[FieldCheck], list[FieldCheck]]:
+    ordered = sorted(checks, key=roi_review_priority, reverse=True)
+    limit = roi_review_max_fields()
+    if limit == 0 or len(ordered) <= limit:
+        return ordered, []
+    return ordered[:limit], ordered[limit:]
+
+
+def roi_review_priority(check: FieldCheck) -> int:
+    field = check.field
+    value = check.recognition.normalized_value or check.recognition.value
+    high_risk_terms = ("授权号", "执照号", "APU", "滑油", "签名")
+    high_risk = any(term in field.label for term in high_risk_terms)
+    priority = 0
+    if not check.passed:
+        priority += 100
+    if high_risk:
+        priority += 80
+    if field.validator in {"regex", "digit_length", "int_range", "number_less_than"}:
+        priority += 30
+    elif field.validator == "same_day":
+        priority += 15
+    if check.recognition.needs_review:
+        priority += 40
+    if not value:
+        priority += 20
+    return priority
 
 
 def unresolved_result(field: FieldSpec, reason: str) -> RecognitionResult:

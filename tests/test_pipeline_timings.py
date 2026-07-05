@@ -3,7 +3,13 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from formcheck.pipeline import analyze_image, numeric_candidate_ambiguity_reason, should_roi_review
+from formcheck.pipeline import (
+    analyze_image,
+    numeric_candidate_ambiguity_reason,
+    roi_review_priority,
+    select_roi_reviews,
+    should_roi_review,
+)
 from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock, RecognitionResult
 
 
@@ -109,3 +115,84 @@ def test_clear_numeric_winner_is_not_marked_ambiguous() -> None:
     ]
 
     assert numeric_candidate_ambiguity_reason(field, candidates) == ""
+
+
+def test_roi_review_selection_prioritizes_high_risk_failures(monkeypatch) -> None:
+    monkeypatch.setenv("ROI_REVIEW_MAX_FIELDS", "2")
+
+    license_field = FieldSpec(
+        id="awr_license",
+        label="29 适航放行-执照号",
+        section="airworthiness_release",
+        bbox=(0, 0, 1, 1),
+        recognizer="keyed_text",
+        validator="regex",
+        params={"pattern": r"^CAACML[0-9]{8}$"},
+        fail_msg="执照号不合规",
+    )
+    date_field = FieldSpec(
+        id="awr_date",
+        label="26 适航放行-日期",
+        section="airworthiness_release",
+        bbox=(0, 0, 1, 1),
+        recognizer="date_text",
+        validator="same_day",
+        params={},
+        fail_msg="日期不是今天",
+    )
+    review_passed_field = FieldSpec(
+        id="apu_cum_cycles",
+        label="23 APU累计使用循环",
+        section="apu",
+        bbox=(0, 0, 1, 1),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="APU循环不小于99999",
+    )
+    low_field = FieldSpec(
+        id="action_station",
+        label="15 处理措施-地点",
+        section="fault_action",
+        bbox=(0, 0, 1, 1),
+        recognizer="keyed_text",
+        validator="exact_text",
+        params={"allow": ["重庆"]},
+        fail_msg="地点不是重庆",
+    )
+    checks = [
+        make_check(review_passed_field, passed=True, needs_review=True),
+        make_check(low_field, passed=False),
+        make_check(license_field, passed=False),
+        make_check(date_field, passed=False),
+    ]
+
+    selected, skipped = select_roi_reviews(checks)
+
+    assert [check.field.id for check in selected] == ["awr_license", "apu_cum_cycles"]
+    assert [check.field.id for check in skipped] == ["awr_date", "action_station"]
+    assert roi_review_priority(selected[0]) > roi_review_priority(skipped[-1])
+
+
+def test_roi_review_selection_can_be_unlimited(monkeypatch) -> None:
+    monkeypatch.setenv("ROI_REVIEW_MAX_FIELDS", "0")
+    field = FieldSpec("f", "字段", "s", (0, 0, 1, 1), "text", "present", {}, "fail")
+    checks = [make_check(field, passed=False), make_check(field, passed=False)]
+
+    selected, skipped = select_roi_reviews(checks)
+
+    assert len(selected) == 2
+    assert skipped == []
+
+
+def make_check(field: FieldSpec, passed: bool, needs_review: bool = False):
+    from formcheck.schemas import FieldCheck
+
+    recognition = RecognitionResult(
+        value="value",
+        normalized_value="value",
+        provider="test",
+        model="test",
+        needs_review=needs_review,
+    )
+    return FieldCheck(field=field, recognition=recognition, passed=passed, message="" if passed else field.fail_msg)
