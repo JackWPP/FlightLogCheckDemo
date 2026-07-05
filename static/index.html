@@ -260,6 +260,22 @@
       gap: 6px;
       margin-top: 8px;
     }
+    .review-diff {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid #f2d39b;
+      border-radius: 6px;
+      background: #fffaf0;
+      font-size: 12px;
+    }
+    .review-diff.accepted {
+      border-color: #b8e2d1;
+      background: #f3fbf7;
+    }
+    .review-diff strong { font-size: 13px; }
+    .review-diff span { color: var(--muted); overflow-wrap: anywhere; }
     .candidate-item {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -982,14 +998,15 @@
       const candidates = lastReport.ocr?.candidates?.[field.id] || [];
       const evidenceKind = review?.roi_url ? 'qwen复核ROI' : field.roi_url ? '字段ROI' : '整页图';
       roiMeta.textContent = `${field.label} | ${evidenceKind} | ${field.source_label || sourceLabel(field.provider)} | ${field.provider}/${field.model} | ${field.message || '通过'}${field.needs_review ? ' | 需复核' : ''} | candidates=${candidates.length}`;
-      candidateList.innerHTML = candidates.length
+      const reviewDiffHtml = renderReviewDiff(review);
+      candidateList.innerHTML = reviewDiffHtml + (candidates.length
         ? candidates.slice(0, 5).map(candidate => `
             <div class="candidate-item">
               <b>${escapeHtml(candidate.text || '')}</b>
               <span>${escapeHtml(candidate.block_id || '')} · ${Number(candidate.assignment_score || 0).toFixed(2)}</span>
             </div>
           `).join('')
-        : '<div class="candidate-item"><b>无候选 block</b><span>ROI/VLM</span></div>';
+        : '<div class="candidate-item"><b>无候选 block</b><span>ROI/VLM</span></div>');
       document.getElementById('fieldRaw').textContent = JSON.stringify({
         value: field.value,
         normalized_value: field.normalized_value,
@@ -1000,6 +1017,24 @@
         raw: field.raw,
         candidates: candidates.slice(0, 5)
       }, null, 2);
+    }
+
+    function renderReviewDiff(review) {
+      if (!review) return '';
+      const accepted = review.accepted === true;
+      const changed = review.changed_value === true;
+      const previous = review.previous_normalized_value || review.previous?.normalized_value || review.previous?.value || '';
+      const current = review.review_normalized_value || review.normalized_value || review.value || '';
+      const confidence = review.confidence === undefined || review.confidence === null ? '' : Number(review.confidence).toFixed(2);
+      const title = accepted ? 'ROI复核已采纳' : 'ROI复核未自动采纳';
+      const changeText = changed ? `${previous || '空'} → ${current || '空'}` : (current ? `复核值：${current}` : '复核未读出有效值');
+      return `
+        <div class="review-diff ${accepted ? 'accepted' : ''}">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(changeText)}</span>
+          <span>${escapeHtml(review.message || '')}${confidence ? ` · 置信度 ${escapeHtml(confidence)}` : ''}</span>
+        </div>
+      `;
     }
 
     function findProblemField(problem, fields) {
