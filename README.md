@@ -51,6 +51,7 @@ copy .env.example .env
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
 - `ROI_REVIEW_MAX_FIELDS`：单张表最多实时复核的 ROI 数，默认 `12`，`0` 表示不限制；超过预算的低优先级字段会保留人工复核证据，不阻塞整张单。
 - `ROI_REVIEW_CACHE_ENABLED`：ROI/VLM 复核缓存，默认 `1`。同一 ROI 图、字段和模型重复复核时复用 `outputs/runtime/roi_review_cache/`。
+- `ROI_REVIEW_ACCEPT_MIN_CONFIDENCE`：ROI/VLM 复核自动采纳阈值，默认 `0.65`；低于阈值的通过结果只作为证据保留并标记需复核。
 - `CLEANER_SECTION_TIMEOUT_SECONDS` / `CLEANER_TOTAL_BUDGET_SECONDS`：Cleaner 分区请求超时与总预算，默认 `75` / `90`。
 - `ISSUE_TRIAGE_TIMEOUT_SECONDS`：问题终裁超时，默认 `45`。
 - `ISSUE_DISPLAY_LIMIT`：右侧展示问题数量上限，默认 `4`；`all_problems` 不受影响。

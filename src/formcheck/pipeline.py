@@ -660,6 +660,26 @@ def roi_review_field(
         }
     }
     review_passed, review_msg = validate(field, reviewed)
+    confidence_ok, confidence_reason = roi_review_confidence_ok(reviewed)
+    if review_passed and not confidence_ok:
+        original.raw = {
+            **(original.raw or {}),
+            "roi_review": {
+                "roi_url": f"/runs/{run_dir.name}/roi_reviews/{field.id}.png",
+                "value": reviewed.value,
+                "normalized_value": reviewed.normalized_value,
+                "confidence": reviewed.confidence,
+                "provider": reviewed.provider,
+                "model": reviewed.model,
+                "passed": review_passed,
+                "message": confidence_reason,
+                "raw": reviewed.raw,
+                "accepted": False,
+            },
+        }
+        original.needs_review = True
+        original.review_reason = confidence_reason
+        return original, original_passed, original_msg
     if review_passed:
         reviewed.needs_review = False
         reviewed.review_reason = "ROI复核通过"
@@ -677,11 +697,28 @@ def roi_review_field(
             "passed": review_passed,
             "message": review_msg,
             "raw": reviewed.raw,
+            "accepted": False,
         },
     }
     original.needs_review = True
     original.review_reason = original.review_reason or "ROI复核未通过"
     return original, original_passed, original_msg
+
+
+def roi_review_accept_min_confidence() -> float:
+    try:
+        value = float(os.getenv("ROI_REVIEW_ACCEPT_MIN_CONFIDENCE", "0.65"))
+    except ValueError:
+        return 0.65
+    return max(0.0, min(value, 1.0))
+
+
+def roi_review_confidence_ok(reviewed: RecognitionResult) -> tuple[bool, str]:
+    confidence = float(reviewed.confidence or 0.0)
+    threshold = roi_review_accept_min_confidence()
+    if confidence >= threshold:
+        return True, ""
+    return False, f"ROI复核置信度低于{threshold:.2f}，需人工确认"
 
 
 def recognize_roi_with_fallback(field: FieldSpec, review_path: Path, provider: str, model: str | None) -> RecognitionResult:

@@ -8,6 +8,7 @@ from formcheck.pipeline import (
     ocr_bbox_to_image_bbox,
     ppocr_evidence_bbox,
     ppocr_visual_page_region,
+    roi_review_field,
     recognize_roi_with_fallback,
     registration_mode,
     should_roi_review,
@@ -226,6 +227,109 @@ def test_aliyun_roi_review_falls_back_to_ocr_model(tmp_path, monkeypatch) -> Non
     assert calls == ["qwen3.7-plus", "qwen3.5-ocr"]
     assert result.normalized_value == "3481"
     assert result.raw["fallback_model"] == "qwen3.5-ocr"
+
+
+def test_low_confidence_roi_review_does_not_override_original_value(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="APU循环不小于99999",
+    )
+    original = RecognitionResult(
+        value="348",
+        normalized_value="348",
+        confidence=0.72,
+        provider="siliconflow:fallback_cleaner",
+        model="cleaner",
+    )
+    evidence = tmp_path / "evidence.png"
+    evidence.write_bytes(b"roi-evidence")
+
+    def fake_review(field_arg, roi_path_arg, provider_arg, model_arg):
+        return RecognitionResult(
+            value="3481",
+            normalized_value="3481",
+            confidence=0.42,
+            provider="aliyun",
+            model=model_arg,
+            raw={"content": "{}"},
+        )
+
+    monkeypatch.setenv("ROI_REVIEW_ACCEPT_MIN_CONFIDENCE", "0.65")
+    monkeypatch.setattr("formcheck.pipeline.recognize_roi_with_fallback", fake_review)
+
+    result, passed, message = roi_review_field(
+        field,
+        original,
+        original_passed=True,
+        original_msg="",
+        run_dir=tmp_path,
+        evidence_path=evidence,
+    )
+
+    assert passed
+    assert message == ""
+    assert result.normalized_value == "348"
+    assert result.needs_review
+    assert result.review_reason == "ROI复核置信度低于0.65，需人工确认"
+    assert result.raw["roi_review"]["normalized_value"] == "3481"
+    assert result.raw["roi_review"]["accepted"] is False
+
+
+def test_high_confidence_roi_review_can_override_original_value(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="APU循环不小于99999",
+    )
+    original = RecognitionResult(
+        value="348",
+        normalized_value="348",
+        confidence=0.72,
+        provider="siliconflow:fallback_cleaner",
+        model="cleaner",
+        needs_review=True,
+    )
+    evidence = tmp_path / "evidence.png"
+    evidence.write_bytes(b"roi-evidence")
+
+    def fake_review(field_arg, roi_path_arg, provider_arg, model_arg):
+        return RecognitionResult(
+            value="3481",
+            normalized_value="3481",
+            confidence=0.91,
+            provider="aliyun",
+            model=model_arg,
+            raw={"content": "{}"},
+        )
+
+    monkeypatch.setenv("ROI_REVIEW_ACCEPT_MIN_CONFIDENCE", "0.65")
+    monkeypatch.setattr("formcheck.pipeline.recognize_roi_with_fallback", fake_review)
+
+    result, passed, message = roi_review_field(
+        field,
+        original,
+        original_passed=True,
+        original_msg="",
+        run_dir=tmp_path,
+        evidence_path=evidence,
+    )
+
+    assert passed
+    assert message == field.fail_msg
+    assert result.normalized_value == "3481"
+    assert not result.needs_review
+    assert result.review_reason == "ROI复核通过"
 
 
 def test_roi_review_success_is_cached(tmp_path, monkeypatch) -> None:
