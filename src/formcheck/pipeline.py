@@ -139,6 +139,9 @@ def analyze_image(
             if not recognition or not (recognition.value or recognition.normalized_value):
                 recognition = recognition or unresolved_result(field, "无可靠OCR候选，等待ROI复核")
         passed, msg = validate(field, recognition)
+        if should_roi_review(field, recognition, passed, mode):
+            recognition.needs_review = True
+            recognition.review_reason = recognition.review_reason or "规则失败，等待ROI复核"
         checks.append(FieldCheck(
             field, recognition, passed, msg,
             roi_url=roi_url,
@@ -356,7 +359,7 @@ def ppocr_evidence_bbox(
     page_size: tuple[float, float] | None = None,
 ) -> tuple[int, int, int, int]:
     page_width, page_height = page_size or (float(width), float(height))
-    base_bbox = scaled_field_bbox(field, page_width, page_height, canonical)
+    base_bbox = scaled_field_bbox(field, page_width, page_height, canonical, for_evidence=True)
     if field.assignment.get("roi_review_always") or field.assignment.get("roi_review") or field.assignment.get("prefer_roi_vlm"):
         return ocr_bbox_to_image_bbox(expand_review_bbox(base_bbox, field), width, height, page_width, page_height)
     candidate_boxes = [candidate.block.box for candidate in candidates[:4]]
@@ -374,10 +377,12 @@ def scaled_field_bbox(
     width: float,
     height: float,
     canonical: dict[str, int],
+    for_evidence: bool = False,
 ) -> tuple[float, float, float, float]:
     scale_x = width / max(float(canonical["width"]), 1.0)
     scale_y = height / max(float(canonical["height"]), 1.0)
-    base = tuple(field.assignment.get("search_bbox") or field.bbox)
+    use_precise_bbox = for_evidence and field.assignment.get("evidence_bbox", "field") != "search"
+    base = tuple(field.bbox if use_precise_bbox else field.assignment.get("search_bbox") or field.bbox)
     return scale_bbox(base, scale_x, scale_y)
 
 
@@ -476,7 +481,7 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
     has_value = bool(recognition.normalized_value or recognition.value)
     if field.assignment.get("prefer_roi_vlm") or field.assignment.get("roi_review"):
         return True
-    if field.validator in {"digit_length", "int_range", "regex"}:
+    if field.validator in {"digit_length", "int_range", "number_less_than", "regex"}:
         return True
     if not has_value:
         return False

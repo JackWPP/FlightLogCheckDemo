@@ -51,11 +51,33 @@ def build_prompt(field: FieldSpec) -> str:
         "输出严格 JSON，不要解释。"
         f"字段: {field.label}。"
         f"识别提示: {hints.get(field.recognizer, '只返回字段填写值，不要返回标签文字')}。"
+        f"字段定位提示: {field_specific_hint(field)}。"
         f"校验规则: {field.validator} {json.dumps(field.params, ensure_ascii=False)}。"
         "若规则是 bilingual_text，必须读取正文里的中文和英文，忽略 P/N、S/N、FIN、SIGN 等表格标签。"
+        "如果裁切图中有多个相邻格，只读取字段名对应的目标格，不要读取旁边格。"
         "如果字段为空，value 和 normalized_value 都输出空字符串。"
         'JSON格式: {"value":"识别值","normalized_value":"归一化值","confidence":0.0}'
     )
+
+
+def field_specific_hint(field: FieldSpec) -> str:
+    label = field.label
+    params = field.params or {}
+    if field.validator == "int_range":
+        return f"目标是 {label}，合规范围是 {params.get('min')} 到 {params.get('max')}；若图中有多个数字，优先选择该范围和字段列都匹配的数字。"
+    if field.validator in {"digit_length", "number_less_than"} and "APU" in label:
+        return "目标是 APU 区域底部累计使用时间/循环的小格数字，只读对应格内数字，忽略相邻 APU 小格。"
+    if field.validator == "regex" and "授权号" in label:
+        return "目标是授权号，通常是 6 位数字；忽略日期、地点、SIGN、AUTHORIZATION NO 标签和签名。"
+    if field.validator == "regex" and "执照号" in label:
+        return "目标是执照号，通常形如 CAACML 加 8 位数字；忽略地点、放行签署和 LICENSE NO 标签。"
+    if field.validator == "name_not_place":
+        return "目标是姓名或签名，不要把重庆、渝、日期、数字或放行声明当作姓名。"
+    if field.validator == "exact_text":
+        return "目标是闭集字段，只返回填写值；重庆和渝等价，NA 和 N/A 等价。"
+    if field.validator == "bilingual_text":
+        return "目标是正文内容，需要同时保留中文和英文手写正文；忽略所有表头和零件号表格标签。"
+    return "只读目标字段值；忽略相邻格、表头、字段标签和格线文字。"
 
 
 def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, model: str | None = None) -> RecognitionResult:

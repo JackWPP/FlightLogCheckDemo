@@ -77,7 +77,7 @@ def test_failed_numeric_fields_go_to_roi_review_even_without_value() -> None:
     assert should_roi_review(field, recognition, passed=False, mode="hybrid")
 
 
-def test_roi_review_fields_use_search_bbox_not_tight_candidate_box() -> None:
+def test_roi_review_fields_use_precise_field_bbox_not_tight_candidate_box() -> None:
     field = FieldSpec(
         id="apu_cum_cycles",
         label="APU累计使用循环",
@@ -116,6 +116,44 @@ def test_roi_review_fields_use_search_bbox_not_tight_candidate_box() -> None:
     assert 55 <= h <= 70
     assert 338 <= x <= 346
     assert 820 <= y <= 836
+
+
+def test_ppocr_evidence_prefers_field_bbox_over_wide_search_bbox() -> None:
+    field = FieldSpec(
+        id="oil_eng1_qty",
+        label="发动机1滑油量",
+        section="oil",
+        bbox=(310, 635, 155, 58),
+        recognizer="numeric_text",
+        validator="int_range",
+        params={"min": 15, "max": 25},
+        fail_msg="滑油量不在15-25",
+        assignment={
+            "search_bbox": [250, 570, 420, 140],
+            "value_type": "numeric",
+            "roi_review": True,
+        },
+    )
+    block = OcrBlock(
+        id="b0094",
+        text="20.5",
+        score=0.9,
+        box=(250, 620, 620, 690),
+        center=(435, 655),
+    )
+    candidate = FieldCandidate(field.id, block, 1.0, "test")
+
+    x, _y, w, _h = ppocr_evidence_bbox(
+        field,
+        [candidate],
+        width=2400,
+        height=1784,
+        canonical={"width": 2400, "height": 1784},
+        page_size=(2400, 1784),
+    )
+
+    assert 295 <= x <= 315
+    assert 190 <= w <= 210
 
 
 def test_ppocr_visual_page_region_uses_left_half_for_stitched_debug_image() -> None:
