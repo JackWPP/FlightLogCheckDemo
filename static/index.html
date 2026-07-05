@@ -249,6 +249,7 @@
     .status strong { display: block; font-size: 18px; margin-bottom: 4px; }
     .problem-list { margin: 0; padding-left: 18px; }
     .problem-list li { margin: 5px 0; color: var(--bad); cursor: pointer; }
+    .problem-list li.review { color: var(--warn); }
     .problem-list li:hover { text-decoration: underline; }
     .evidence img { width: 100%; border: 1px solid var(--line); background: #fff; }
     .evidence-main {
@@ -782,7 +783,8 @@
       });
       problems.innerHTML = (report.problems || []).map((p) => {
         const field = findProblemField(p, report.fields);
-        return `<li data-id="${field?.id || ''}">${escapeHtml(p)}</li>`;
+        const kind = field?.passed && field?.needs_review ? 'review' : 'failure';
+        return `<li class="${kind === 'review' ? 'review' : ''}" data-id="${field?.id || ''}">${escapeHtml(p)}</li>`;
       }).join('');
       problems.querySelectorAll('li').forEach(item => {
         item.addEventListener('click', () => {
@@ -790,7 +792,10 @@
           if (id) selectField(id, { jump: true });
         });
       });
-      if (report.fields.length) selectField(report.fields.find(f => !f.passed)?.id || report.fields[0].id);
+      if (report.fields.length) {
+        const initial = report.fields.find(f => !f.passed) || report.fields.find(f => f.needs_review) || report.fields[0];
+        selectField(initial.id);
+      }
     }
 
     function renderImageEvidence(report) {
