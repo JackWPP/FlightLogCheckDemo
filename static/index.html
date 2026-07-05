@@ -930,8 +930,18 @@
         metric(s.passed_count ?? report.fields.filter(f => f.passed).length, '通过'),
         metric(s.failed_count ?? report.fields.filter(f => !f.passed).length, '失败'),
         metric(s.review_count ?? report.fields.filter(f => f.needs_review).length, '需复核'),
+        metric(reviewMetricText(report), 'VLM复核'),
         metric((s.cleaner_model || report.ocr?.cleaner_model || 'cached').replace('deepseek-ai/', ''), 'Cleaner')
       ].join('');
+    }
+
+    function reviewMetricText(report) {
+      const plan = report.review_plan || {};
+      const summary = report.summary || {};
+      const selected = plan.selected_count ?? summary.review_selected_count ?? report.timings?.review_selected_count ?? 0;
+      const skipped = plan.skipped_count ?? summary.review_skipped_count ?? report.timings?.review_skipped_count ?? 0;
+      const maxFields = plan.max_fields ?? summary.review_max_fields ?? '';
+      return skipped ? `${selected}/${maxFields || selected}+${skipped}` : String(selected);
     }
 
     function metric(value, label) {

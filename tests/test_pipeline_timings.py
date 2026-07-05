@@ -5,6 +5,7 @@ import numpy as np
 
 from formcheck.pipeline import (
     analyze_image,
+    build_review_plan,
     numeric_candidate_ambiguity_reason,
     roi_review_priority,
     select_roi_reviews,
@@ -183,6 +184,30 @@ def test_roi_review_selection_can_be_unlimited(monkeypatch) -> None:
 
     assert len(selected) == 2
     assert skipped == []
+
+
+def test_review_plan_records_selected_and_skipped(monkeypatch) -> None:
+    monkeypatch.setenv("ROI_REVIEW_MAX_FIELDS", "1")
+    high = FieldSpec(
+        "awr_license",
+        "29 适航放行-执照号",
+        "airworthiness_release",
+        (0, 0, 1, 1),
+        "keyed_text",
+        "regex",
+        {"pattern": r"^CAACML[0-9]{8}$"},
+        "执照号不合规",
+    )
+    low = FieldSpec("action_station", "15 处理措施-地点", "fault_action", (0, 0, 1, 1), "keyed_text", "exact_text", {}, "地点不是重庆")
+    checks = [make_check(low, passed=False), make_check(high, passed=False)]
+    selected, skipped = select_roi_reviews(checks)
+
+    plan = build_review_plan(checks, selected, skipped)
+
+    assert plan["max_fields"] == 1
+    assert plan["eligible_count"] == 2
+    assert plan["selected"][0]["field_id"] == "awr_license"
+    assert plan["skipped"][0]["field_id"] == "action_station"
 
 
 def make_check(field: FieldSpec, passed: bool, needs_review: bool = False):

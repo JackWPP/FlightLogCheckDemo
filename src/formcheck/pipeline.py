@@ -164,6 +164,7 @@ def analyze_image(
         if should_roi_review(c.field, c.recognition, c.passed, mode) and (ppocr_roi_paths.get(c.field.id) or warped is not None)
     ]
     needs_review, skipped_review = select_roi_reviews(reviewable_checks)
+    review_plan = build_review_plan(reviewable_checks, needs_review, skipped_review)
     for check in skipped_review:
         check.recognition.needs_review = True
         check.recognition.review_reason = check.recognition.review_reason or "超过ROI复核预算，保留人工复核"
@@ -213,7 +214,8 @@ def analyze_image(
         "problems": problems or ["通过"],
         "all_problems": all_problems,
         "issue_triage": issue_result["issue_triage"],
-        "summary": build_summary(field_dicts, ocr_meta["public"]),
+        "summary": build_summary(field_dicts, ocr_meta["public"], review_plan),
+        "review_plan": review_plan,
         "registration": _reg_dict(reg, reg_mode),
         "warped_url": warped_url,
         "mode": mode,
@@ -253,6 +255,31 @@ def select_roi_reviews(checks: list[FieldCheck]) -> tuple[list[FieldCheck], list
     if limit == 0 or len(ordered) <= limit:
         return ordered, []
     return ordered[:limit], ordered[limit:]
+
+
+def build_review_plan(
+    eligible: list[FieldCheck],
+    selected: list[FieldCheck],
+    skipped: list[FieldCheck],
+) -> dict:
+    return {
+        "max_fields": roi_review_max_fields(),
+        "eligible_count": len(eligible),
+        "selected_count": len(selected),
+        "skipped_count": len(skipped),
+        "selected": [review_plan_item(check) for check in selected],
+        "skipped": [review_plan_item(check) for check in skipped],
+    }
+
+
+def review_plan_item(check: FieldCheck) -> dict:
+    return {
+        "field_id": check.field.id,
+        "label": check.field.label,
+        "priority": roi_review_priority(check),
+        "passed_before_review": check.passed,
+        "reason": check.recognition.review_reason,
+    }
 
 
 def roi_review_priority(check: FieldCheck) -> int:
@@ -773,14 +800,18 @@ def _check_dict(check: FieldCheck) -> dict:
     }
 
 
-def build_summary(fields: list[dict], ocr_public: dict) -> dict:
+def build_summary(fields: list[dict], ocr_public: dict, review_plan: dict | None = None) -> dict:
     failed = [field for field in fields if not field["passed"]]
     review = [field for field in fields if field.get("needs_review")]
+    review_plan = review_plan or {}
     return {
         "field_count": len(fields),
         "passed_count": len(fields) - len(failed),
         "failed_count": len(failed),
         "review_count": len(review),
+        "review_selected_count": int(review_plan.get("selected_count") or 0),
+        "review_skipped_count": int(review_plan.get("skipped_count") or 0),
+        "review_max_fields": int(review_plan.get("max_fields") or 0),
         "ocr_block_count": len(ocr_public.get("blocks") or []),
         "cleaner_model": ocr_public.get("cleaner_model"),
         "ocr_ok": ocr_public.get("ok"),
