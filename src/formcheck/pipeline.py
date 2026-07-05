@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -22,7 +23,7 @@ from .ppocr_pipeline import block_to_dict, run_ppocrv6
 from .recognizers import mock_recognize
 from .registration import load_template, register, save_registration_summary
 from .schemas import FieldCheck, FieldSpec, RecognitionResult
-from .validators import validate
+from .validators import compact_text, validate
 
 
 # Progress callback signature: cb(stage: str, status: str, **extra) -> None
@@ -139,6 +140,12 @@ def analyze_image(
             if not recognition or not (recognition.value or recognition.normalized_value):
                 recognition = recognition or unresolved_result(field, "无可靠OCR候选，等待ROI复核")
         passed, msg = validate(field, recognition)
+        ambiguity_reason = numeric_candidate_ambiguity_reason(field, ocr_meta.get("assignments", {}).get(field.id, []))
+        if ambiguity_reason:
+            recognition.needs_review = True
+            recognition.review_reason = recognition.review_reason or ambiguity_reason
+            if isinstance(recognition.raw, dict):
+                recognition.raw["candidate_ambiguity"] = ambiguity_reason
         if should_roi_review(field, recognition, passed, mode):
             recognition.needs_review = True
             recognition.review_reason = recognition.review_reason or "规则失败，等待ROI复核"
@@ -474,6 +481,8 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
         return False
     if field.assignment.get("roi_review_always"):
         return True
+    if recognition.needs_review and field.validator in {"digit_length", "int_range", "number_less_than"}:
+        return True
     if passed:
         return False
     if field.assignment.get("skip_roi_review"):
@@ -486,6 +495,26 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
     if not has_value:
         return False
     return False
+
+
+def numeric_candidate_ambiguity_reason(field: FieldSpec, candidates) -> str:
+    if field.validator not in {"digit_length", "int_range", "number_less_than"}:
+        return ""
+    if field.section not in {"oil", "apu"} and not field.assignment.get("ambiguity_review"):
+        return ""
+    numeric = [
+        candidate for candidate in candidates[:4]
+        if re.fullmatch(r"\d+(?:\.\d+)?", compact_text(candidate.block.text))
+    ]
+    if len(numeric) < 2:
+        return ""
+    first, second = numeric[0], numeric[1]
+    if compact_text(first.block.text) == compact_text(second.block.text):
+        return ""
+    score_ratio = second.score / max(first.score, 0.001)
+    if score_ratio >= float(field.assignment.get("ambiguity_score_ratio", 0.68)):
+        return "存在相近数字候选，等待ROI复核"
+    return ""
 
 
 def review_check(check: FieldCheck, run_dir: Path, evidence_path: Path | None, warped) -> FieldCheck:

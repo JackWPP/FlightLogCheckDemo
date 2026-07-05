@@ -3,8 +3,8 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from formcheck.pipeline import analyze_image
-from formcheck.schemas import FieldSpec, RecognitionResult
+from formcheck.pipeline import analyze_image, numeric_candidate_ambiguity_reason, should_roi_review
+from formcheck.schemas import FieldCandidate, FieldSpec, OcrBlock, RecognitionResult
 
 
 def test_no_key_report_keeps_fine_grained_timings(tmp_path, monkeypatch) -> None:
@@ -67,3 +67,45 @@ def test_failed_reviewable_field_is_marked_waiting_for_roi(tmp_path, monkeypatch
     assert not result["passed"]
     assert result["needs_review"]
     assert result["review_reason"] == "规则失败，等待ROI复核"
+
+
+def test_dense_numeric_fields_with_close_candidates_are_marked_for_review() -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="23 APU累计使用循环",
+        section="apu",
+        bbox=(0, 0, 100, 50),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="APU循环不小于99999",
+    )
+    candidates = [
+        FieldCandidate(field.id, OcrBlock("b1", "5789", 0.99, (0, 0, 40, 20), (20, 10)), 2.6, "best"),
+        FieldCandidate(field.id, OcrBlock("b2", "114121", 0.99, (45, 0, 100, 20), (72, 10)), 2.1, "near"),
+    ]
+
+    reason = numeric_candidate_ambiguity_reason(field, candidates)
+    recognition = RecognitionResult("5789", "5789", needs_review=bool(reason), review_reason=reason)
+
+    assert reason == "存在相近数字候选，等待ROI复核"
+    assert should_roi_review(field, recognition, passed=True, mode="hybrid")
+
+
+def test_clear_numeric_winner_is_not_marked_ambiguous() -> None:
+    field = FieldSpec(
+        id="oil_eng1_added",
+        label="02 发动机1加注量",
+        section="oil",
+        bbox=(0, 0, 100, 50),
+        recognizer="numeric_text",
+        validator="int_range",
+        params={"min": 0, "max": 4},
+        fail_msg="发动机1加注量不在0-4",
+    )
+    candidates = [
+        FieldCandidate(field.id, OcrBlock("b1", "0", 0.99, (0, 0, 40, 20), (20, 10)), 2.6, "best"),
+        FieldCandidate(field.id, OcrBlock("b2", "19.5", 0.99, (45, 0, 100, 20), (72, 10)), 1.2, "far"),
+    ]
+
+    assert numeric_candidate_ambiguity_reason(field, candidates) == ""
