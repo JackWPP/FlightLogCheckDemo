@@ -279,6 +279,9 @@ def test_low_confidence_roi_review_does_not_override_original_value(tmp_path, mo
     assert result.review_reason == "ROI复核置信度低于0.65，需人工确认"
     assert result.raw["roi_review"]["normalized_value"] == "3481"
     assert result.raw["roi_review"]["accepted"] is False
+    assert result.raw["roi_review"]["changed_value"] is True
+    assert result.raw["roi_review"]["previous_normalized_value"] == "348"
+    assert result.raw["roi_review"]["review_normalized_value"] == "3481"
 
 
 def test_high_confidence_roi_review_can_override_original_value(tmp_path, monkeypatch) -> None:
@@ -330,6 +333,10 @@ def test_high_confidence_roi_review_can_override_original_value(tmp_path, monkey
     assert result.normalized_value == "3481"
     assert not result.needs_review
     assert result.review_reason == "ROI复核通过"
+    assert result.raw["roi_review"]["accepted"] is True
+    assert result.raw["roi_review"]["changed_value"] is True
+    assert result.raw["roi_review"]["previous_normalized_value"] == "348"
+    assert result.raw["roi_review"]["review_normalized_value"] == "3481"
 
 
 def test_roi_review_success_is_cached(tmp_path, monkeypatch) -> None:

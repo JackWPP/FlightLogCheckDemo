@@ -193,6 +193,9 @@ def issue_risk_score(field: dict[str, Any]) -> int:
     raw = field.get("raw") if isinstance(field.get("raw"), dict) else {}
     if raw.get("roi_review"):
         score += 20
+        review = raw.get("roi_review")
+        if isinstance(review, dict) and review.get("changed_value"):
+            score += 12
     if raw.get("roi_review_skipped"):
         score += 18
     return score
@@ -210,6 +213,9 @@ def issue_risk_level(field: dict[str, Any]) -> str:
 def evidence_state(field: dict[str, Any]) -> str:
     raw = field.get("raw") if isinstance(field.get("raw"), dict) else {}
     if raw.get("roi_review"):
+        review = raw.get("roi_review")
+        if isinstance(review, dict) and review.get("changed_value"):
+            return "roi_reviewed_changed"
         return "roi_reviewed"
     if raw.get("roi_review_skipped"):
         return "roi_review_skipped"

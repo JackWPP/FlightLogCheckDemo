@@ -124,6 +124,28 @@ def test_issue_triage_prompt_includes_risk_and_evidence_state() -> None:
     assert evidence_state(fields[0]) == "roi_review_skipped"
 
 
+def test_issue_triage_marks_changed_roi_review_evidence() -> None:
+    field = {
+        "id": "apu_cum_cycles",
+        "label": "23 APU累计使用循环",
+        "validator": "number_less_than",
+        "message": "APU循环不小于99999",
+        "passed": True,
+        "needs_review": True,
+        "raw": {
+            "roi_review": {
+                "changed_value": True,
+                "previous_normalized_value": "348",
+                "review_normalized_value": "3481",
+            }
+        },
+    }
+
+    assert evidence_state(field) == "roi_reviewed_changed"
+    assert issue_risk_level(field) == "high"
+    assert '"evidence_state": "roi_reviewed_changed"' in build_triage_prompt([field], 4)
+
+
 def test_issue_triage_prompt_distinguishes_review_pending_from_failure() -> None:
     fields = [
         {

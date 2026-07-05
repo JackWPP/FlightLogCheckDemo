@@ -661,6 +661,7 @@ def roi_review_field(
     }
     review_passed, review_msg = validate(field, reviewed)
     confidence_ok, confidence_reason = roi_review_confidence_ok(reviewed)
+    review_diff = roi_review_diff(original, reviewed)
     if review_passed and not confidence_ok:
         original.raw = {
             **(original.raw or {}),
@@ -675,12 +676,19 @@ def roi_review_field(
                 "message": confidence_reason,
                 "raw": reviewed.raw,
                 "accepted": False,
+                **review_diff,
             },
         }
         original.needs_review = True
         original.review_reason = confidence_reason
         return original, original_passed, original_msg
     if review_passed:
+        if isinstance(reviewed.raw, dict) and isinstance(reviewed.raw.get("roi_review"), dict):
+            reviewed.raw["roi_review"] = {
+                **reviewed.raw["roi_review"],
+                "accepted": True,
+                **review_diff,
+            }
         reviewed.needs_review = False
         reviewed.review_reason = "ROI复核通过"
         return reviewed, True, review_msg
@@ -698,6 +706,7 @@ def roi_review_field(
             "message": review_msg,
             "raw": reviewed.raw,
             "accepted": False,
+            **review_diff,
         },
     }
     original.needs_review = True
@@ -719,6 +728,17 @@ def roi_review_confidence_ok(reviewed: RecognitionResult) -> tuple[bool, str]:
     if confidence >= threshold:
         return True, ""
     return False, f"ROI复核置信度低于{threshold:.2f}，需人工确认"
+
+
+def roi_review_diff(original: RecognitionResult, reviewed: RecognitionResult) -> dict:
+    previous = compact_text(original.normalized_value or original.value)
+    current = compact_text(reviewed.normalized_value or reviewed.value)
+    changed = bool(previous and current and previous != current)
+    return {
+        "changed_value": changed,
+        "previous_normalized_value": previous,
+        "review_normalized_value": current,
+    }
 
 
 def recognize_roi_with_fallback(field: FieldSpec, review_path: Path, provider: str, model: str | None) -> RecognitionResult:
