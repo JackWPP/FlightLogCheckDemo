@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import hashlib
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -11,7 +12,7 @@ from typing import Callable
 import cv2
 import numpy as np
 
-from .config import CANONICAL_DIR, FIELDS_PATH, OUT_DIR
+from .config import CANONICAL_DIR, FIELDS_PATH, OUT_DIR, OUTPUTS_DIR
 from .crop import crop_roi, save_rois
 from .field_assignment import assign_blocks_to_fields, candidates_to_json, estimate_ocr_page_size, scale_bbox
 from .fields import load_fields
@@ -683,8 +684,13 @@ def roi_review_field(
 
 
 def recognize_roi_with_fallback(field: FieldSpec, review_path: Path, provider: str, model: str | None) -> RecognitionResult:
+    if roi_review_cache_enabled():
+        cached = load_roi_review_cache(field, review_path, provider, model)
+        if cached:
+            return cached
     reviewed = recognize_with_provider(field, review_path, provider, model)
     if not roi_review_should_fallback(reviewed, provider, model):
+        save_roi_review_cache(field, review_path, provider, model, reviewed)
         return reviewed
     fallback_model = roi_review_fallback_model(provider, model)
     fallback = recognize_with_provider(field, review_path, provider, fallback_model)
@@ -694,7 +700,81 @@ def recognize_roi_with_fallback(field: FieldSpec, review_path: Path, provider: s
         "fallback_raw": fallback.raw,
         "fallback_model": fallback_model,
     }
+    save_roi_review_cache(field, review_path, provider, model, fallback)
     return fallback
+
+
+def roi_review_cache_enabled() -> bool:
+    return os.getenv("ROI_REVIEW_CACHE_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def roi_review_cache_dir(field: FieldSpec, review_path: Path, provider: str, model: str | None) -> Path:
+    payload = {
+        "field_id": field.id,
+        "label": field.label,
+        "validator": field.validator,
+        "params": field.params,
+        "provider": provider,
+        "model": model or "",
+        "image_sha256": hashlib.sha256(review_path.read_bytes()).hexdigest(),
+        "prompt_version": "field-aware-v2",
+    }
+    key = hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    return OUTPUTS_DIR / "runtime" / "roi_review_cache" / key
+
+
+def load_roi_review_cache(field: FieldSpec, review_path: Path, provider: str, model: str | None) -> RecognitionResult | None:
+    path = roi_review_cache_dir(field, review_path, provider, model) / "result.json"
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        raw = data.get("raw")
+        if isinstance(raw, dict):
+            raw = {**raw, "roi_review_cache_hit": True}
+        return RecognitionResult(
+            value=str(data.get("value") or ""),
+            normalized_value=str(data.get("normalized_value") or data.get("value") or ""),
+            confidence=float(data.get("confidence") or 0.0),
+            provider=str(data.get("provider") or provider),
+            model=str(data.get("model") or model or ""),
+            raw=raw,
+            needs_review=bool(data.get("needs_review") or False),
+            review_reason=str(data.get("review_reason") or ""),
+        )
+    except Exception:
+        return None
+
+
+def save_roi_review_cache(
+    field: FieldSpec,
+    review_path: Path,
+    provider: str,
+    model: str | None,
+    result: RecognitionResult,
+) -> None:
+    if not roi_review_cache_enabled():
+        return
+    raw = result.raw if isinstance(result.raw, dict) else {}
+    if raw.get("error") or not (result.value or result.normalized_value):
+        return
+    cache_dir = roi_review_cache_dir(field, review_path, provider, model)
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "value": result.value,
+            "normalized_value": result.normalized_value,
+            "confidence": result.confidence,
+            "provider": result.provider,
+            "model": result.model,
+            "raw": result.raw,
+            "needs_review": result.needs_review,
+            "review_reason": result.review_reason,
+            "cached_at": int(time.time()),
+        }
+        (cache_dir / "result.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        return
 
 
 def roi_review_should_fallback(reviewed: RecognitionResult, provider: str, model: str | None) -> bool:

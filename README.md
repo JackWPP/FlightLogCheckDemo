@@ -50,6 +50,7 @@ copy .env.example .env
 - `ROI_REVIEW_PROVIDER` / `ROI_REVIEW_MODEL`：控制复核模型；若主模型超时或报错，可通过 `ROI_REVIEW_FALLBACK_MODEL` 自动降级。
 - `ROI_REVIEW_CONCURRENCY`：ROI 复核并发数，默认 `3`，用于让数字/编号类失败字段并发进入 qwen 复核。
 - `ROI_REVIEW_MAX_FIELDS`：单张表最多实时复核的 ROI 数，默认 `12`，`0` 表示不限制；超过预算的低优先级字段会保留人工复核证据，不阻塞整张单。
+- `ROI_REVIEW_CACHE_ENABLED`：ROI/VLM 复核缓存，默认 `1`。同一 ROI 图、字段和模型重复复核时复用 `outputs/runtime/roi_review_cache/`。
 - `CLEANER_SECTION_TIMEOUT_SECONDS` / `CLEANER_TOTAL_BUDGET_SECONDS`：Cleaner 分区请求超时与总预算，默认 `75` / `90`。
 - `ISSUE_TRIAGE_TIMEOUT_SECONDS`：问题终裁超时，默认 `45`。
 - `ISSUE_DISPLAY_LIMIT`：右侧展示问题数量上限，默认 `4`；`all_problems` 不受影响。
@@ -100,7 +101,7 @@ fields.yaml             字段、ROI、规则和候选归属配置
 
 上传新图的 `report.json` 会包含 `timings`，用于定位线上慢点，例如 `ppocr_submit_ms`、`ppocr_poll_ms`、`ppocr_download_ms`、`assignment_ms`、`cleaner_ms`、`review_ms`、`issue_triage_ms` 和 `total_ms`。`summary.ocr_cache_hit` 为 `true` 时表示本次整页 OCR 走缓存，没有重新访问 PaddleOCR 云端。
 
-任务队列数据保存在 `outputs/runtime/tasks.sqlite3`，Cleaner 缓存在 `outputs/runtime/cleaner_cache/`。同一张图重复上传时，PP-OCR 和 Cleaner 都会尽量复用缓存。
+任务队列数据保存在 `outputs/runtime/tasks.sqlite3`，PP-OCR、Cleaner 和 ROI/VLM 复核分别缓存在 `outputs/runtime/ocr_cache/`、`outputs/runtime/cleaner_cache/`、`outputs/runtime/roi_review_cache/`。同一张图重复上传时会尽量复用缓存。
 
 ## 测试
 

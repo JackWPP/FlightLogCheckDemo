@@ -218,6 +218,7 @@ def test_aliyun_roi_review_falls_back_to_ocr_model(tmp_path, monkeypatch) -> Non
         )
 
     monkeypatch.setenv("ROI_REVIEW_FALLBACK_MODEL", "qwen3.5-ocr")
+    monkeypatch.setenv("ROI_REVIEW_CACHE_ENABLED", "0")
     monkeypatch.setattr("formcheck.pipeline.recognize_with_provider", fake_recognize)
 
     result = recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.7-plus")
@@ -225,3 +226,154 @@ def test_aliyun_roi_review_falls_back_to_ocr_model(tmp_path, monkeypatch) -> Non
     assert calls == ["qwen3.7-plus", "qwen3.5-ocr"]
     assert result.normalized_value == "3481"
     assert result.raw["fallback_model"] == "qwen3.5-ocr"
+
+
+def test_roi_review_success_is_cached(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="digit_length",
+        params={"allow_lengths": [4, 5]},
+        fail_msg="APU循环不是4或5位",
+    )
+    roi_path = tmp_path / "roi.png"
+    roi_path.write_bytes(b"fake-success")
+    calls = []
+
+    def fake_recognize(field_arg, roi_path_arg, provider_arg, model_arg):
+        calls.append(model_arg)
+        return RecognitionResult(
+            value="3481",
+            normalized_value="3481",
+            confidence=0.91,
+            provider="aliyun",
+            model=model_arg,
+            raw={"content": "{}"},
+        )
+
+    monkeypatch.setattr("formcheck.pipeline.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setenv("ROI_REVIEW_CACHE_ENABLED", "1")
+    monkeypatch.setattr("formcheck.pipeline.recognize_with_provider", fake_recognize)
+
+    first = recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.5-ocr")
+    second = recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.5-ocr")
+
+    assert calls == ["qwen3.5-ocr"]
+    assert first.normalized_value == "3481"
+    assert second.normalized_value == "3481"
+    assert second.raw["roi_review_cache_hit"] is True
+
+
+def test_roi_review_cache_is_model_specific(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="awr_license",
+        label="适航放行-执照号",
+        section="airworthiness_release",
+        bbox=(0, 0, 1, 1),
+        recognizer="keyed_text",
+        validator="regex",
+        params={"pattern": r"^CAACML[0-9]{8}$"},
+        fail_msg="执照号不合规",
+    )
+    roi_path = tmp_path / "license.png"
+    roi_path.write_bytes(b"license-roi")
+    calls = []
+
+    def fake_recognize(field_arg, roi_path_arg, provider_arg, model_arg):
+        calls.append(model_arg)
+        return RecognitionResult(
+            value=model_arg,
+            normalized_value=model_arg,
+            confidence=0.8,
+            provider="aliyun",
+            model=model_arg,
+            raw={"content": "{}"},
+        )
+
+    monkeypatch.setattr("formcheck.pipeline.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setattr("formcheck.pipeline.recognize_with_provider", fake_recognize)
+
+    one = recognize_roi_with_fallback(field, roi_path, "aliyun", "model-a")
+    two = recognize_roi_with_fallback(field, roi_path, "aliyun", "model-b")
+
+    assert calls == ["model-a", "model-b"]
+    assert one.normalized_value == "model-a"
+    assert two.normalized_value == "model-b"
+
+
+def test_roi_review_cache_can_be_disabled(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(690, 1678, 230, 100),
+        recognizer="numeric_text",
+        validator="digit_length",
+        params={"allow_lengths": [4, 5]},
+        fail_msg="APU循环不是4或5位",
+    )
+    roi_path = tmp_path / "roi.png"
+    roi_path.write_bytes(b"cache-disabled")
+    calls = []
+
+    def fake_recognize(field_arg, roi_path_arg, provider_arg, model_arg):
+        calls.append(model_arg)
+        return RecognitionResult(
+            value="3481",
+            normalized_value="3481",
+            confidence=0.91,
+            provider="aliyun",
+            model=model_arg,
+            raw={"content": "{}"},
+        )
+
+    monkeypatch.setattr("formcheck.pipeline.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setenv("ROI_REVIEW_CACHE_ENABLED", "0")
+    monkeypatch.setattr("formcheck.pipeline.recognize_with_provider", fake_recognize)
+
+    first = recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.5-ocr")
+    second = recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.5-ocr")
+
+    assert calls == ["qwen3.5-ocr", "qwen3.5-ocr"]
+    assert first.normalized_value == "3481"
+    assert second.normalized_value == "3481"
+    assert "roi_review_cache_hit" not in (second.raw or {})
+
+
+def test_roi_review_errors_are_not_cached(tmp_path, monkeypatch) -> None:
+    field = FieldSpec(
+        id="action_authorization",
+        label="授权号",
+        section="fault_action",
+        bbox=(0, 0, 1, 1),
+        recognizer="keyed_text",
+        validator="regex",
+        params={"pattern": r"^[0-9]{6}$"},
+        fail_msg="授权号不是6位数字",
+    )
+    roi_path = tmp_path / "auth.png"
+    roi_path.write_bytes(b"auth-roi")
+    calls = []
+
+    def fake_recognize(field_arg, roi_path_arg, provider_arg, model_arg):
+        calls.append(model_arg)
+        return RecognitionResult(
+            value="",
+            normalized_value="",
+            confidence=0.0,
+            provider="aliyun",
+            model=model_arg,
+            raw={"error": "timeout"},
+        )
+
+    monkeypatch.setattr("formcheck.pipeline.OUTPUTS_DIR", tmp_path / "outputs")
+    monkeypatch.setenv("ROI_REVIEW_FALLBACK_MODEL", "")
+    monkeypatch.setattr("formcheck.pipeline.recognize_with_provider", fake_recognize)
+
+    recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.5-ocr")
+    recognize_roi_with_fallback(field, roi_path, "aliyun", "qwen3.5-ocr")
+
+    assert calls == ["qwen3.5-ocr", "qwen3.5-ocr"]
