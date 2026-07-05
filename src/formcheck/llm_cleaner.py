@@ -475,6 +475,10 @@ def fallback_clean(
 def best_candidate_text(field: FieldSpec, candidates: list[FieldCandidate]) -> str:
     if not candidates:
         return ""
+    if field.validator in {"digit_length", "number_less_than"}:
+        merged = merge_adjacent_numeric_candidates(field, candidates)
+        if merged:
+            return merged
     if field.validator == "english_text":
         texts = [
             cleaned
@@ -490,6 +494,85 @@ def best_candidate_text(field: FieldSpec, candidates: list[FieldCandidate]) -> s
         ]
         return " ".join(texts)
     return candidates[0].block.text
+
+
+def merge_adjacent_numeric_candidates(field: FieldSpec, candidates: list[FieldCandidate]) -> str:
+    """Recover values split into adjacent OCR blocks, e.g. ``348`` + ``1``."""
+    anchor = candidates[0]
+    anchor_digits = compact_digits(anchor.block.text)
+    if not anchor_digits:
+        return ""
+    max_len = numeric_field_max_digits(field)
+    if len(anchor_digits) >= max_len:
+        return anchor_digits
+    if len(anchor_digits) >= numeric_field_merge_threshold(field):
+        return anchor_digits
+
+    merged = anchor_digits
+    right_edge = anchor.block.box[2]
+    anchor_height = max(anchor.block.box[3] - anchor.block.box[1], 1.0)
+    anchor_center_y = anchor.block.center[1]
+    right_fragments = sorted(
+        (
+            candidate
+            for candidate in candidates[1:8]
+            if numeric_fragment_can_extend(anchor, candidate, right_edge, anchor_center_y, anchor_height)
+        ),
+        key=lambda candidate: candidate.block.box[0],
+    )
+    for candidate in right_fragments:
+        fragment = compact_digits(candidate.block.text)
+        if not fragment or len(merged) + len(fragment) > max_len:
+            continue
+        gap = candidate.block.box[0] - right_edge
+        if gap > max(anchor_height * 2.2, 55.0):
+            continue
+        merged += fragment
+        right_edge = max(right_edge, candidate.block.box[2])
+    return merged
+
+
+def compact_digits(value: str) -> str:
+    compact = compact_text(value)
+    return compact if re.fullmatch(r"\d+", compact) else ""
+
+
+def numeric_field_max_digits(field: FieldSpec) -> int:
+    if field.validator == "digit_length":
+        lengths = [int(item) for item in field.params.get("allow_lengths", [])]
+        return max(lengths) if lengths else 6
+    if field.validator == "number_less_than":
+        try:
+            return max(1, len(str(int(field.params.get("max", 999999)) - 1)))
+        except (TypeError, ValueError):
+            return 6
+    return 6
+
+
+def numeric_field_merge_threshold(field: FieldSpec) -> int:
+    if field.validator == "digit_length":
+        lengths = [int(item) for item in field.params.get("allow_lengths", [])]
+        return min(lengths) if lengths else 4
+    return 4
+
+
+def numeric_fragment_can_extend(
+    anchor: FieldCandidate,
+    candidate: FieldCandidate,
+    right_edge: float,
+    anchor_center_y: float,
+    anchor_height: float,
+) -> bool:
+    fragment = compact_digits(candidate.block.text)
+    if not fragment:
+        return False
+    candidate_box = candidate.block.box
+    if candidate_box[0] < right_edge - anchor_height * 0.2:
+        return False
+    candidate_height = max(candidate_box[3] - candidate_box[1], 1.0)
+    if abs(candidate.block.center[1] - anchor_center_y) > max(anchor_height, candidate_height) * 0.75:
+        return False
+    return candidate.score >= anchor.score * 0.25
 
 
 def normalize_for_field(field: FieldSpec, value: str) -> str:

@@ -118,6 +118,84 @@ def test_normalize_for_field_extracts_regex_subvalues() -> None:
     assert normalize_for_field(license_field, "重庆 CAACML20198975") == "CAACML20198975"
 
 
+def test_fallback_clean_merges_right_split_numeric_candidate() -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(0, 0, 160, 80),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="fail",
+    )
+    main = OcrBlock("main", "348", 0.96, (20, 20, 92, 64), (56, 42))
+    tail = OcrBlock("tail", "1", 0.72, (98, 21, 118, 63), (108, 42))
+    assignments = {
+        field.id: [
+            FieldCandidate(field.id, main, 2.4, "overlap=0.70"),
+            FieldCandidate(field.id, tail, 0.9, "center_near"),
+        ]
+    }
+
+    result = fallback_clean([field], assignments, "mock", "cleaner")[field.id]
+
+    assert result.value == "3481"
+    assert result.normalized_value == "3481"
+
+
+def test_fallback_clean_does_not_merge_left_neighbor_numeric_cell() -> None:
+    field = FieldSpec(
+        id="apu_cum_cycles",
+        label="APU累计使用循环",
+        section="apu",
+        bbox=(100, 0, 160, 80),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="fail",
+    )
+    target = OcrBlock("target", "3481", 0.96, (130, 20, 220, 64), (175, 42))
+    left_neighbor = OcrBlock("hours", "2238", 0.94, (20, 20, 105, 64), (62, 42))
+    assignments = {
+        field.id: [
+            FieldCandidate(field.id, target, 2.4, "overlap=0.70"),
+            FieldCandidate(field.id, left_neighbor, 1.3, "center_near"),
+        ]
+    }
+
+    result = fallback_clean([field], assignments, "mock", "cleaner")[field.id]
+
+    assert result.value == "3481"
+    assert result.normalized_value == "3481"
+
+
+def test_fallback_clean_does_not_extend_already_plausible_apu_number() -> None:
+    field = FieldSpec(
+        id="apu_cum_hours",
+        label="APU累计使用时间",
+        section="apu",
+        bbox=(0, 0, 160, 80),
+        recognizer="numeric_text",
+        validator="number_less_than",
+        params={"max": 99999},
+        fail_msg="fail",
+    )
+    hours = OcrBlock("hours", "2238", 0.96, (20, 20, 104, 64), (62, 42))
+    neighbor_tail = OcrBlock("neighbor_tail", "1", 0.72, (110, 21, 130, 63), (120, 42))
+    assignments = {
+        field.id: [
+            FieldCandidate(field.id, hours, 2.4, "overlap=0.70"),
+            FieldCandidate(field.id, neighbor_tail, 0.9, "center_near"),
+        ]
+    }
+
+    result = fallback_clean([field], assignments, "mock", "cleaner")[field.id]
+
+    assert result.value == "2238"
+    assert result.normalized_value == "2238"
+
+
 def test_cleaner_timeout_fallback_is_cached(tmp_path, monkeypatch) -> None:
     field = FieldSpec(
         id="fault_ref",
