@@ -77,6 +77,8 @@ def field_specific_hint(field: FieldSpec) -> str:
         return "目标是姓名或签名，不要把重庆、渝、日期、数字或放行声明当作姓名。"
     if field.validator == "exact_text":
         return "目标是闭集字段，只返回填写值；重庆和渝等价，NA 和 N/A 等价。"
+    if field.validator == "contains_english":
+        return "目标是故障报告正文中的英文内容；可以忽略中文，但必须保留读到的英文手写正文。"
     if field.validator == "bilingual_text":
         return "目标是正文内容，需要同时保留中文和英文手写正文；忽略所有表头和零件号表格标签。"
     return "只读目标字段值；忽略相邻格、表头、字段标签和格线文字。"
@@ -112,18 +114,21 @@ def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, mod
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
         parsed = _parse_json_content(content)
+        value = str(parsed.get("value", ""))
+        normalized_value = str(parsed.get("normalized_value") or parsed.get("value", ""))
+        confidence = parsed_confidence(parsed, selected_model, value, normalized_value)
         log_event(
             "vlm.request.done",
             provider=cfg.name,
             model=selected_model,
             field_id=field.id,
             duration_ms=int((time.time() - started) * 1000),
-            has_value=bool(parsed.get("value") or parsed.get("normalized_value")),
+            has_value=bool(value or normalized_value),
         )
         return RecognitionResult(
-            value=str(parsed.get("value", "")),
-            normalized_value=str(parsed.get("normalized_value") or parsed.get("value", "")),
-            confidence=float(parsed.get("confidence") or 0.0),
+            value=value,
+            normalized_value=normalized_value,
+            confidence=confidence,
             provider=cfg.name,
             model=selected_model,
             raw={"content": content, "usage": data.get("usage")},
@@ -151,10 +156,20 @@ def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, mod
 
 def request_timeout_seconds() -> int:
     try:
-        value = int(os.getenv("VLM_REQUEST_TIMEOUT_SECONDS", "45"))
+        value = int(os.getenv("VLM_REQUEST_TIMEOUT_SECONDS", "25"))
     except ValueError:
-        return 45
+        return 25
     return max(5, min(value, 180))
+
+
+def parsed_confidence(parsed: dict[str, Any], model: str, value: str, normalized_value: str) -> float:
+    try:
+        confidence = float(parsed.get("confidence") or 0.0)
+    except (TypeError, ValueError):
+        confidence = 0.0
+    if confidence <= 0.0 and (value or normalized_value) and "ocr" in model.lower():
+        return 0.72
+    return confidence
 
 
 def _parse_json_content(content: str) -> dict[str, Any]:

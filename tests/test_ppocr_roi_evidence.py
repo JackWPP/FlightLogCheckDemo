@@ -157,6 +157,74 @@ def test_ppocr_evidence_prefers_field_bbox_over_wide_search_bbox() -> None:
     assert 190 <= w <= 210
 
 
+def test_oil_pf_numeric_evidence_uses_primary_sequence_candidate_bbox() -> None:
+    field = FieldSpec(
+        id="oil_eng1_qty",
+        label="发动机1滑油量",
+        section="oil",
+        bbox=(310, 635, 155, 58),
+        recognizer="numeric_text",
+        validator="int_range",
+        params={"min": 15, "max": 25},
+        fail_msg="滑油量不在15-25",
+        assignment={"search_bbox": [250, 570, 420, 140], "value_type": "numeric"},
+    )
+    left_neighbor = OcrBlock(
+        id="b0093",
+        text="0",
+        score=0.99,
+        box=(180, 635, 230, 690),
+        center=(205, 662),
+    )
+    target = OcrBlock(
+        id="b0094",
+        text="20.5",
+        score=0.88,
+        box=(320, 635, 410, 690),
+        center=(365, 662),
+    )
+    right_neighbor = OcrBlock(
+        id="b0095",
+        text="0",
+        score=0.99,
+        box=(500, 635, 550, 690),
+        center=(525, 662),
+    )
+    candidates = [
+        FieldCandidate(field.id, target, 1.0, "oil_pf_row_sequence"),
+        FieldCandidate(field.id, left_neighbor, 0.9, "neighbor"),
+        FieldCandidate(field.id, right_neighbor, 0.8, "neighbor"),
+    ]
+
+    x, _y, w, _h = ppocr_evidence_bbox(
+        field,
+        candidates,
+        width=2400,
+        height=1784,
+        canonical={"width": 2400, "height": 1784},
+        page_size=(2400, 1784),
+    )
+
+    assert 290 <= x <= 295
+    assert 140 <= w <= 150
+
+
+def test_empty_failed_closed_fields_can_go_to_roi_review() -> None:
+    field = FieldSpec(
+        id="action_station",
+        label="处理措施-地点",
+        section="fault_action",
+        bbox=(1585, 700, 280, 72),
+        recognizer="keyed_text",
+        validator="exact_text",
+        params={"allow": ["重庆", "渝", "Chongqing"]},
+        fail_msg="处理地点不是重庆",
+    )
+    recognition = RecognitionResult(value="", normalized_value="", provider="unresolved")
+
+    assert should_roi_review(field, recognition, passed=False, mode="hybrid")
+
+
 def test_ppocr_visual_page_region_uses_left_half_for_stitched_debug_image() -> None:
     region = ppocr_visual_page_region(
         image_width=2000,

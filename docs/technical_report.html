@@ -125,7 +125,7 @@
     <p>
       <span class="pill">PP-OCRv6</span>
       <span class="pill">DeepSeek-V4-Flash</span>
-      <span class="pill">qwen3.7-plus ROI 复核</span>
+      <span class="pill">qwen3.5-ocr ROI 复核</span>
       <span class="pill">FastAPI 本地 Demo</span>
     </p>
   </header>
@@ -160,7 +160,7 @@
         <tr><th>模块</th><th>当前模型/方法</th><th>职责边界</th></tr>
         <tr><td>整页 OCR</td><td><code>PP-OCRv6</code></td><td>文档矫正、文字检测、文字识别、输出 box 和 score。</td></tr>
         <tr><td>字段清洗</td><td><code>deepseek-ai/DeepSeek-V4-Flash</code></td><td>从候选文字中选择字段值、归一化日期/编号/英文内容。</td></tr>
-        <tr><td>ROI 复核</td><td><code>qwen3.7-plus</code></td><td>只对关键失败字段的 PaddleOCR 局部小图做二次识别，成功后替换原值。</td></tr>
+        <tr><td>ROI 复核</td><td><code>qwen3.5-ocr</code></td><td>只对关键失败字段的 PaddleOCR 局部小图做二次识别，成功后替换原值。</td></tr>
         <tr><td>最终判定</td><td>本地规则</td><td>范围、正则、日期、checkbox、英文判断等，LLM 不直接决定合规。</td></tr>
       </table>
     </section>

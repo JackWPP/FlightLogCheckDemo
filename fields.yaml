@@ -93,22 +93,22 @@ fields:
     fail_msg: 报告人不是姓名
     assignment: {search_bbox: [420, 675, 360, 120], value_type: signature, prefer_roi_vlm: true, needs_review: true}
   - id: mechanic_checkbox
-    label: 11 故障报告-机务
+    label: 11 故障报告-机组/机务
     section: fault_action
-    bbox: [838, 724, 34, 34]
+    bbox: [765, 715, 110, 50]
     recognizer: checkbox
     validator: checked
     params: {}
-    fail_msg: 机务未勾选
+    fail_msg: 机组/机务未勾选
   - id: fault_description_bilingual
-    label: 12 故障报告-中英文内容
+    label: 12 故障报告-英文内容
     section: fault_action
     bbox: [28, 775, 875, 155]
     recognizer: free_text
-    validator: bilingual_text
-    params: {min_letters: 1, min_cjk: 1}
-    fail_msg: 故障报告缺少中英文
-    assignment: {search_bbox: [0, 760, 880, 210], value_type: bilingual, merge: line}
+    validator: contains_english
+    params: {}
+    fail_msg: 故障报告未填写英文
+    assignment: {search_bbox: [0, 760, 880, 210], value_type: free_text, merge: line}
 
   - id: action_ref
     label: 13 处理措施-参考手册
@@ -116,7 +116,7 @@ fields:
     bbox: [900, 700, 515, 72]
     recognizer: keyed_text
     validator: prefix_or_exact
-    params: {prefixes: ["AMM", "TSM"], allow_exact: ["N/A", "NA"]}
+    params: {prefixes: ["AMM", "TSM", "FLA"], allow_exact: ["N/A", "NA"]}
     fail_msg: 参考手册不合规
     assignment: {search_bbox: [820, 680, 560, 140], value_type: ref}
   - id: action_defer_no
@@ -147,20 +147,20 @@ fields:
     fail_msg: 处理日期不是今天
     assignment: {search_bbox: [1880, 675, 340, 130], value_type: date, merge: date}
   - id: action_description_bilingual
-    label: 17 处理措施-中英文内容
+    label: 17 处理措施-内容
     section: fault_action
     bbox: [900, 775, 1260, 145]
     recognizer: free_text
-    validator: bilingual_text
-    params: {min_letters: 1, min_cjk: 1}
-    fail_msg: 处理措施缺少中英文
-    assignment: {search_bbox: [880, 735, 1280, 185], value_type: bilingual, merge: line}
+    validator: present
+    params: {}
+    fail_msg: 处理措施未填写
+    assignment: {search_bbox: [880, 735, 1280, 185], value_type: free_text, merge: line}
   - id: action_removed_part_info
     label: 18 拆下件信息
     section: fault_action
     bbox: [900, 925, 560, 70]
     recognizer: keyed_text
-    validator: present
+    validator: optional
     params: {}
     fail_msg: 拆下件信息漏填
     assignment: {search_bbox: [860, 900, 640, 110], value_type: text, merge: line, prefer_roi_vlm: true, needs_review: true}
@@ -169,7 +169,7 @@ fields:
     section: fault_action
     bbox: [1460, 925, 420, 70]
     recognizer: keyed_text
-    validator: present
+    validator: optional
     params: {}
     fail_msg: 安装件信息漏填
     assignment: {search_bbox: [1420, 900, 520, 110], value_type: text, merge: line, prefer_roi_vlm: true, needs_review: true}
@@ -198,8 +198,8 @@ fields:
     bbox: [505, 1678, 230, 100]
     recognizer: numeric_text
     validator: number_less_than
-    params: {max: 99999}
-    fail_msg: APU时间不小于99999
+    params: {max: 9999}
+    fail_msg: APU时间不小于9999
     assignment: {search_bbox: [500, 1660, 220, 124], value_type: numeric, roi_review: true}
   - id: apu_cum_cycles
     label: 23 APU累计使用循环
@@ -207,8 +207,8 @@ fields:
     bbox: [690, 1678, 230, 100]
     recognizer: numeric_text
     validator: number_less_than
-    params: {max: 99999}
-    fail_msg: APU循环不小于99999
+    params: {max: 9999}
+    fail_msg: APU循环不小于9999
     assignment: {search_bbox: [690, 1660, 230, 124], value_type: numeric, roi_review: true, roi_review_always: true}
 
   - id: awr_post_flt_checkbox

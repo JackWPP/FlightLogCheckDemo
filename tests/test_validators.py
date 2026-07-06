@@ -45,6 +45,12 @@ def test_english_text() -> None:
     assert not validate(spec, RecognitionResult("故障 message"))[0]
 
 
+def test_contains_english_allows_mixed_text() -> None:
+    spec = field("contains_english", {})
+    assert validate(spec, RecognitionResult("周检需要检查 engine oil tube"))[0]
+    assert not validate(spec, RecognitionResult("周检需要检查"))[0]
+
+
 def test_bilingual_text() -> None:
     spec = field("bilingual_text", {"min_letters": 1, "min_cjk": 1})
     assert validate(spec, RecognitionResult("更换氧气瓶 replace oxygen cylinder"))[0]
@@ -55,8 +61,13 @@ def test_bilingual_text() -> None:
 def test_name_not_place() -> None:
     spec = field("name_not_place", {"not_allow": ["重庆", "渝", "Chongqing"]})
     assert validate(spec, RecognitionResult("李四"))[0]
+    assert validate(spec, RecognitionResult("王小明"))[0]
     assert not validate(spec, RecognitionResult("重庆"))[0]
     assert not validate(spec, RecognitionResult("渝"))[0]
+    assert not validate(spec, RecognitionResult("报告者"))[0]
+    assert not validate(spec, RecognitionResult("SIGN"))[0]
+    assert not validate(spec, RecognitionResult("S/N ON"))[0]
+    assert not validate(spec, RecognitionResult("2026.07.01"))[0]
     assert not validate(spec, RecognitionResult(""))[0]
 
 
@@ -75,12 +86,13 @@ def test_na_variants_are_accepted() -> None:
     assert not validate(spec, RecognitionResult("MA"))[0]
 
 
-def test_prefix_or_exact_keeps_na_strict_and_rejects_other_prefixes() -> None:
-    spec = field("prefix_or_exact", {"prefixes": ["AMM", "TSM"], "allow_exact": ["N/A", "NA"]})
+def test_prefix_or_exact_accepts_customer_reference_prefixes() -> None:
+    spec = field("prefix_or_exact", {"prefixes": ["AMM", "TSM", "FLA"], "allow_exact": ["N/A", "NA"]})
     assert validate(spec, RecognitionResult("AMM35-22-42"))[0]
     assert validate(spec, RecognitionResult("TSM21"))[0]
+    assert validate(spec, RecognitionResult("FLA320-05-51-14"))[0]
     assert validate(spec, RecognitionResult("N-A"))[0]
-    assert not validate(spec, RecognitionResult("FLA320-05-51-14"))[0]
+    assert not validate(spec, RecognitionResult("ATA320-05-51-14"))[0]
 
 
 def test_digit_length() -> None:
@@ -91,7 +103,27 @@ def test_digit_length() -> None:
 
 
 def test_number_less_than() -> None:
-    spec = field("number_less_than", {"max": 99999})
-    assert validate(spec, RecognitionResult("99888"))[0]
-    assert not validate(spec, RecognitionResult("99999"))[0]
+    spec = field("number_less_than", {"max": 9999})
+    assert validate(spec, RecognitionResult("9988"))[0]
+    assert not validate(spec, RecognitionResult("9999"))[0]
     assert not validate(spec, RecognitionResult(""))[0]
+
+
+def test_oil_quantity_normalizes_common_handwritten_two_as_seven() -> None:
+    spec = FieldSpec(
+        id="oil_eng1_qty",
+        label="03 发动机1滑油量",
+        section="oil",
+        bbox=(0, 0, 1, 1),
+        recognizer="numeric_text",
+        validator="int_range",
+        params={"min": 15, "max": 25},
+        fail_msg="滑油量不在15-25",
+    )
+
+    assert validate(spec, RecognitionResult("70.5"))[0]
+
+
+def test_optional_always_passes() -> None:
+    spec = field("optional", {})
+    assert validate(spec, RecognitionResult(""))[0]

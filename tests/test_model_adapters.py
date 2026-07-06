@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PIL import Image
 
-from formcheck.model_adapters import build_prompt, image_payload
+from formcheck.model_adapters import build_prompt, image_payload, parsed_confidence
 from formcheck.model_adapters import request_timeout_seconds
 from formcheck.schemas import FieldSpec
 
@@ -20,7 +20,13 @@ def test_vlm_request_timeout_is_bounded(monkeypatch) -> None:
 
 def test_vlm_request_timeout_falls_back_on_invalid_value(monkeypatch) -> None:
     monkeypatch.setenv("VLM_REQUEST_TIMEOUT_SECONDS", "slow")
-    assert request_timeout_seconds() == 45
+    assert request_timeout_seconds() == 25
+
+
+def test_ocr_model_value_gets_conservative_default_confidence() -> None:
+    assert parsed_confidence({"confidence": "0.0"}, "qwen3.5-ocr", "20.5", "") == 0.72
+    assert parsed_confidence({"confidence": "0.0"}, "qwen3.7-plus", "20.5", "") == 0.0
+    assert parsed_confidence({"confidence": "0.81"}, "qwen3.5-ocr", "20.5", "") == 0.81
 
 
 def test_image_payload_resizes_large_roi(tmp_path, monkeypatch) -> None:

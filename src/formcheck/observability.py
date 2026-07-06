@@ -40,7 +40,7 @@ class JsonFormatter(logging.Formatter):
             payload.update(sanitize_payload(extra))
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
-        return json.dumps({k: v for k, v in payload.items() if v not in {"", None}}, ensure_ascii=False)
+        return json.dumps({k: v for k, v in payload.items() if keep_log_value(v)}, ensure_ascii=False)
 
 
 def configure_logging() -> None:
@@ -68,6 +68,14 @@ def configure_logging() -> None:
         logger.addHandler(console)
 
     _configured = True
+
+
+def keep_log_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str) and value == "":
+        return False
+    return True
 
 
 def log_event(event: str, level: str = "info", **payload: Any) -> None:

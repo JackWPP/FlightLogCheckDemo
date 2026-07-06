@@ -63,6 +63,29 @@ def test_int_range_penalizes_neighbor_column_value() -> None:
     assert assignments[field.id][0].block.text == "19.5"
 
 
+def test_oil_pf_row_sequence_maps_numeric_cells_left_to_right() -> None:
+    fields = [
+        oil_field("oil_eng1_added", "02 发动机1加注量", (170, 635, 160, 58), {"min": 0, "max": 4}),
+        oil_field("oil_eng1_qty", "03 发动机1滑油量", (310, 635, 155, 58), {"min": 15, "max": 25}),
+        oil_field("oil_eng2_added", "04 发动机2加注量", (470, 635, 130, 58), {"min": 0, "max": 4}),
+        oil_field("oil_eng2_qty", "05 发动机2滑油量", (580, 635, 155, 58), {"min": 15, "max": 25}),
+        oil_field("oil_apu_added", "06 APU加注量", (700, 635, 135, 58), {"min": 0, "max": 2}),
+    ]
+    blocks = [
+        OcrBlock("b1", "0", 0.99, (190, 650, 225, 685), (207, 667)),
+        OcrBlock("b2", "20.5", 0.99, (330, 650, 395, 685), (362, 667)),
+        OcrBlock("b3", "0", 0.99, (500, 650, 535, 685), (517, 667)),
+        OcrBlock("b4", "20.5", 0.99, (600, 650, 665, 685), (632, 667)),
+        OcrBlock("b5", "0", 0.99, (725, 650, 760, 685), (742, 667)),
+        OcrBlock("edge", "边界", 0.1, (2300, 1720, 2390, 1770), (2345, 1745)),
+    ]
+
+    assignments = assign_blocks_to_fields(fields, blocks, (2400, 1784))
+
+    assert [assignments[field.id][0].block.text for field in fields] == ["0", "20.5", "0", "20.5", "0"]
+    assert all(assignments[field.id][0].reason == "oil_pf_row_sequence" for field in fields)
+
+
 def test_station_alias_enters_exact_text_candidates() -> None:
     field = FieldSpec(
         id="action_station",
@@ -260,3 +283,17 @@ def test_shared_primary_block_is_kept_for_best_matching_field_only() -> None:
 
     assert assignments[station_field.id][0].block.text == "重庆"
     assert assignments[sign_field.id] == []
+
+
+def oil_field(field_id: str, label: str, bbox: tuple[int, int, int, int], params: dict) -> FieldSpec:
+    return FieldSpec(
+        id=field_id,
+        label=label,
+        section="oil",
+        bbox=bbox,
+        recognizer="numeric_text",
+        validator="int_range",
+        params=params,
+        fail_msg="fail",
+        assignment={"search_bbox": [bbox[0], 570, bbox[2], 130], "value_type": "numeric", "row": "last"},
+    )

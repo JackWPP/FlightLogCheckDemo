@@ -18,7 +18,7 @@ from .field_assignment import assign_blocks_to_fields, candidates_to_json, estim
 from .fields import load_fields
 from .image_io import imread, imwrite
 from .issue_triage import triage_issues
-from .llm_cleaner import DEFAULT_CLEANER_MODEL, clean_field_values_with_meta
+from .llm_cleaner import DEFAULT_CLEANER_MODEL, clean_field_values_with_meta, normalize_for_field
 from .model_adapters import recognize_with_provider
 from .observability import log_event
 from .ppocr_pipeline import block_to_dict, run_ppocrv6
@@ -142,6 +142,7 @@ def analyze_image(
             recognition = ocr_meta["cleaned_results"].get(field.id)
             if not recognition or not (recognition.value or recognition.normalized_value):
                 recognition = recognition or unresolved_result(field, "无可靠OCR候选，等待ROI复核")
+        recognition.normalized_value = normalize_for_field(field, recognition.normalized_value or recognition.value)
         passed, msg = validate(field, recognition)
         ambiguity_reason = numeric_candidate_ambiguity_reason(field, ocr_meta.get("assignments", {}).get(field.id, []))
         if ambiguity_reason:
@@ -457,7 +458,14 @@ def ppocr_evidence_bbox(
 ) -> tuple[int, int, int, int]:
     page_width, page_height = page_size or (float(width), float(height))
     base_bbox = scaled_field_bbox(field, page_width, page_height, canonical, for_evidence=True)
-    if field.assignment.get("roi_review_always") or field.assignment.get("roi_review") or field.assignment.get("prefer_roi_vlm"):
+    if should_use_primary_candidate_bbox(field, candidates):
+        return ocr_bbox_to_image_bbox(expand_xyxy(candidates[0].block.box, 0.3), width, height, page_width, page_height)
+    if (
+        field.assignment.get("roi_review_always")
+        or field.assignment.get("roi_review")
+        or field.assignment.get("prefer_roi_vlm")
+        or field_needs_precise_evidence_bbox(field)
+    ):
         return ocr_bbox_to_image_bbox(expand_review_bbox(base_bbox, field), width, height, page_width, page_height)
     candidate_boxes = [candidate.block.box for candidate in candidates[:4]]
     if candidate_boxes:
@@ -467,6 +475,14 @@ def ppocr_evidence_bbox(
         y2 = max(box[3] for box in candidate_boxes)
         return ocr_bbox_to_image_bbox(expand_xyxy((x1, y1, x2, y2), 0.55), width, height, page_width, page_height)
     return ocr_bbox_to_image_bbox(expand_xyxy(base_bbox, 0.35), width, height, page_width, page_height)
+
+
+def should_use_primary_candidate_bbox(field: FieldSpec, candidates) -> bool:
+    if not candidates:
+        return False
+    if field.section != "oil" or field.assignment.get("value_type") != "numeric":
+        return False
+    return candidates[0].reason == "oil_pf_row_sequence"
 
 
 def scaled_field_bbox(
@@ -481,6 +497,12 @@ def scaled_field_bbox(
     use_precise_bbox = for_evidence and field.assignment.get("evidence_bbox", "field") != "search"
     base = tuple(field.bbox if use_precise_bbox else field.assignment.get("search_bbox") or field.bbox)
     return scale_bbox(base, scale_x, scale_y)
+
+
+def field_needs_precise_evidence_bbox(field: FieldSpec) -> bool:
+    if field.assignment.get("value_type") in {"numeric", "date"}:
+        return True
+    return field.validator in {"int_range", "number_less_than"}
 
 
 def roi_review_expand_ratio(field: FieldSpec) -> float:
@@ -582,6 +604,8 @@ def should_roi_review(field, recognition, passed: bool, mode: str) -> bool:
         return True
     if field.validator in {"digit_length", "int_range", "number_less_than", "regex"}:
         return True
+    if not has_value and field.validator in {"exact_text", "same_day", "name_not_place", "present"}:
+        return True
     if not has_value:
         return False
     return False
@@ -648,7 +672,7 @@ def roi_review_field(
     warped=None,
 ):
     provider = os.getenv("ROI_REVIEW_PROVIDER", "aliyun")
-    model = os.getenv("ROI_REVIEW_MODEL", "qwen3.7-plus")
+    model = os.getenv("ROI_REVIEW_MODEL", "qwen3.5-ocr")
     review_dir = run_dir / "roi_reviews"
     review_dir.mkdir(parents=True, exist_ok=True)
     review_path = review_dir / f"{field.id}.png"
@@ -663,6 +687,7 @@ def roi_review_field(
         original.review_reason = original.review_reason or "缺少ROI复核图"
         return original, original_passed, original_msg
     reviewed = recognize_roi_with_fallback(field, review_path, provider, model)
+    reviewed.normalized_value = normalize_for_field(field, reviewed.normalized_value or reviewed.value)
     reviewed.provider = f"roi-vlm:{reviewed.provider}"
     reviewed.raw = {
         "roi_review": {
@@ -787,7 +812,7 @@ def roi_review_cache_dir(field: FieldSpec, review_path: Path, provider: str, mod
         "provider": provider,
         "model": model or "",
         "image_sha256": hashlib.sha256(review_path.read_bytes()).hexdigest(),
-        "prompt_version": "field-aware-v2",
+        "prompt_version": "field-aware-v3",
     }
     key = hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
     return OUTPUTS_DIR / "runtime" / "roi_review_cache" / key

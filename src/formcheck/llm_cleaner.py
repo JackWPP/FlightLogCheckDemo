@@ -16,10 +16,11 @@ from .field_assignment import candidates_to_json, looks_like_form_label_text
 from .observability import log_event
 from .schemas import FieldCandidate, FieldSpec, RecognitionResult
 from .validators import compact_text, normalize_date, normalize_exact_value, normalize_na, normalize_regex_value, today_str
+from .validators import normalize_int_range_value
 
 
 DEFAULT_CLEANER_MODEL = "deepseek-ai/DeepSeek-V4-Flash"
-CLEANER_PROMPT_VERSION = "station-na-bilingual-v2"
+CLEANER_PROMPT_VERSION = "customer-rules-v3"
 
 
 def clean_field_values(
@@ -218,9 +219,11 @@ def clean_section_values(
             }
             value = str(item.get("value", ""))
             normalized_value = str(item.get("normalized_value") or item.get("value", ""))
-            if field.validator == "english_text":
+            if field.validator in {"english_text", "contains_english"}:
                 value = sanitize_english_text(value)
                 normalized_value = sanitize_english_text(normalized_value)
+            elif field.validator == "int_range":
+                normalized_value = normalize_for_field(field, normalized_value)
             results[field.id] = RecognitionResult(
                 value=value,
                 normalized_value=normalized_value,
@@ -420,9 +423,9 @@ def build_cleaner_prompt(fields: list[FieldSpec], assignments: dict[str, list[Fi
         "如果没有可靠候选，value 和 normalized_value 输出空字符串，confidence 低于 0.2，needs_review 为 true。"
         "规则型字段可直接采用最高分候选并做轻量归一化，不要过度改写。"
         "渝是重庆简称，Chongqing也归一为重庆；NA、N/A、N-A、N A、N／A 都归一为 N/A。"
-        "日期尽量归一化为 YYYY-MM-DD；参考手册只有 AMM/TSM 开头或 N/A/NA 合规，"
-        "但如果候选是 FLA320 等其他编号也必须保留原值，交给本地规则判失败，不要输出空。"
-        "执照号去空格并大写；英文故障描述只保留主要英文手写内容，过滤字段标签。"
+        "日期尽量归一化为 YYYY-MM-DD；参考手册 AMM/TSM/FLA 开头或 N/A/NA 合规，"
+        "其他编号也必须保留原值，交给本地规则判失败，不要输出空。"
+        "执照号去空格并大写；故障报告英文内容只要保留英文手写正文即可，不要求删除同一区域中文证据。"
         "中英文字段必须优先合并大文本框正文候选中的中文正文和英文正文，"
         "忽略表头/格线标签，例如 P/N、S/N、FIN、SIGN、安装件号、拆下序号、工作者签名。"
         f"当前分区: {section or 'all'}。"
@@ -530,14 +533,14 @@ def best_candidate_text(field: FieldSpec, candidates: list[FieldCandidate]) -> s
         merged = merge_adjacent_numeric_candidates(field, candidates)
         if merged:
             return merged
-    if field.validator == "english_text":
+    if field.validator in {"english_text", "contains_english"}:
         texts = [
             cleaned
             for candidate in candidates[:6]
             if (cleaned := sanitize_english_text(candidate.block.text))
         ]
         return " ".join(texts)
-    if field.validator == "bilingual_text":
+    if field.validator == "bilingual_text" or (field.validator == "present" and field.assignment.get("value_type") == "free_text"):
         texts = [
             candidate.block.text.strip()
             for candidate in candidates[:8]
@@ -628,13 +631,15 @@ def numeric_fragment_can_extend(
 
 def normalize_for_field(field: FieldSpec, value: str) -> str:
     text = (value or "").strip()
-    if field.validator == "english_text":
+    if field.validator in {"english_text", "contains_english"}:
         return sanitize_english_text(text)
     if field.validator == "exact_text":
         return normalize_exact_value(text)
     if field.validator == "prefix_or_exact":
         na = normalize_na(text)
         return "N/A" if na == "N/A" else compact_text(text).upper()
+    if field.validator == "int_range":
+        return normalize_int_range_value(field, text)
     if field.validator == "regex":
         return normalize_regex_value(str(field.params.get("pattern", "")), text)
     if field.validator == "same_day":
@@ -651,7 +656,7 @@ def looks_like_form_label(value: str) -> bool:
 
 
 def cleaner_prompt_candidates(field: FieldSpec, candidates: list[FieldCandidate]) -> list[FieldCandidate]:
-    if field.validator != "bilingual_text":
+    if field.validator not in {"bilingual_text", "contains_english"} and field.assignment.get("value_type") != "free_text":
         return candidates[:6]
     body = [candidate for candidate in candidates[:10] if looks_like_bilingual_body_candidate(candidate.block.text)]
     return (body or candidates)[:6]

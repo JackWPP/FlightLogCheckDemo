@@ -53,6 +53,14 @@ FORM_LABEL_TOKENS = [
     "工作者签名",
 ]
 
+OIL_PF_NUMERIC_FIELDS = [
+    "oil_eng1_added",
+    "oil_eng1_qty",
+    "oil_eng2_added",
+    "oil_eng2_qty",
+    "oil_apu_added",
+]
+
 
 def assign_blocks_to_fields(
     fields: list[FieldSpec],
@@ -76,7 +84,70 @@ def assign_blocks_to_fields(
         scored.sort(key=lambda item: item.score, reverse=True)
         assignments[field.id] = scored[:max_candidates]
     resolve_candidate_conflicts(assignments, {field.id: field for field in fields}, max_candidates)
+    apply_oil_pf_row_sequence(assignments, fields, blocks, scale_x, scale_y, max_candidates)
     return assignments
+
+
+def apply_oil_pf_row_sequence(
+    assignments: dict[str, list[FieldCandidate]],
+    fields: list[FieldSpec],
+    blocks: list[OcrBlock],
+    scale_x: float,
+    scale_y: float,
+    max_candidates: int,
+) -> None:
+    fields_by_id = {field.id: field for field in fields}
+    oil_fields = [fields_by_id.get(field_id) for field_id in OIL_PF_NUMERIC_FIELDS]
+    if any(field is None for field in oil_fields):
+        return
+    numeric_blocks = oil_pf_numeric_blocks([field for field in oil_fields if field], blocks, scale_x, scale_y)
+    if len(numeric_blocks) < 3:
+        return
+    row_blocks = bottom_numeric_row(numeric_blocks)
+    if len(row_blocks) < 3:
+        return
+    row_blocks = sorted(row_blocks, key=lambda block: block.center[0])
+    for field_id, block in zip(OIL_PF_NUMERIC_FIELDS, row_blocks[: len(OIL_PF_NUMERIC_FIELDS)]):
+        field = fields_by_id[field_id]
+        candidate = FieldCandidate(field_id, block, 4.0 + block.score, "oil_pf_row_sequence")
+        existing = [item for item in assignments.get(field_id, []) if item.block.id != block.id]
+        assignments[field_id] = [candidate, *existing][:max_candidates]
+
+
+def oil_pf_numeric_blocks(fields: list[FieldSpec], blocks: list[OcrBlock], scale_x: float, scale_y: float) -> list[OcrBlock]:
+    boxes = [
+        scale_bbox(tuple(field.assignment.get("search_bbox") or field.bbox), scale_x, scale_y)
+        for field in fields
+    ]
+    x1 = min(box[0] for box in boxes)
+    y1 = min(box[1] for box in boxes)
+    x2 = max(box[2] for box in boxes)
+    y2 = max(box[3] for box in boxes)
+    width = max(x2 - x1, 1.0)
+    height = max(y2 - y1, 1.0)
+    region = (x1 - width * 0.25, y1 - height * 0.15, x2 + width * 0.25, y2 + height * 0.35)
+    return [
+        block
+        for block in blocks
+        if point_inside(block.center, region) and re.fullmatch(r"\d+(?:\.\d+)?", compact_text(block.text))
+    ]
+
+
+def bottom_numeric_row(blocks: list[OcrBlock]) -> list[OcrBlock]:
+    ordered = sorted(blocks, key=lambda block: block.center[1])
+    rows: list[list[OcrBlock]] = []
+    for block in ordered:
+        block_height = max(block.box[3] - block.box[1], 1.0)
+        for row in rows:
+            row_y = sum(item.center[1] for item in row) / len(row)
+            row_height = max(max(item.box[3] - item.box[1], 1.0) for item in row)
+            if abs(block.center[1] - row_y) <= max(block_height, row_height) * 0.7:
+                row.append(block)
+                break
+        else:
+            rows.append([block])
+    rows.sort(key=lambda row: (sum(item.center[1] for item in row) / len(row), len(row)), reverse=True)
+    return rows[0] if rows else []
 
 
 def resolve_candidate_conflicts(
@@ -309,7 +380,7 @@ def pattern_score(field: FieldSpec, text: str) -> float:
             return 1.0
         if any(upper.startswith(str(prefix).upper()) for prefix in field.params.get("prefixes", [])):
             return 1.0
-        if "AMM" in upper or "TSM" in upper:
+        if "AMM" in upper or "TSM" in upper or "FLA" in upper:
             return 0.85
         if re.search(r"[A-Z]{2,}\d", upper):
             return 0.35
@@ -323,13 +394,15 @@ def pattern_score(field: FieldSpec, text: str) -> float:
             return 0.0
     if field.validator in {"digit_length", "number_less_than"}:
         return 0.9 if re.fullmatch(r"\d+(?:\.\d+)?", compact) else 0.0
-    if field.validator in {"english_text", "bilingual_text"}:
-        if field.validator == "bilingual_text" and label_noise(field, text):
+    if field.validator in {"english_text", "bilingual_text", "contains_english"}:
+        if field.validator in {"bilingual_text", "contains_english"} and label_noise(field, text):
             return 0.0
         has_letter = bool(re.search(r"[A-Za-z]", text))
         has_cjk = bool(re.search(r"[\u4e00-\u9fff]", text))
         if field.validator == "bilingual_text":
             return 0.9 if has_letter and has_cjk else (0.45 if has_letter or has_cjk else 0.0)
+        if field.validator == "contains_english":
+            return 0.8 if has_letter else 0.0
         return 0.8 if has_letter and not has_cjk else (0.35 if has_letter else 0.0)
     if field.validator == "exact_text":
         normalized = normalized_compact(text).upper()

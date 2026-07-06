@@ -6,6 +6,26 @@ from zoneinfo import ZoneInfo
 
 from .schemas import FieldSpec, RecognitionResult
 
+NAME_NOISE_VALUES = {
+    "报告者",
+    "报告人",
+    "工作者签名",
+    "放行签署",
+    "签名",
+    "SIGN",
+    "REPORTEDBY",
+    "RELEASESIGN",
+    "SIGNPRESENT",
+    "S/NON",
+    "S/NOFF",
+    "P/NON",
+    "P/NOFF",
+    "SNON",
+    "SNOFF",
+    "PNON",
+    "PNOFF",
+}
+
 
 def normalize_text(value: str) -> str:
     return (value or "").strip().replace("：", ":").replace("／", "/")
@@ -88,6 +108,7 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
     expected_today = now or today_str()
 
     if validator == "int_range":
+        value = normalize_int_range_value(field, value)
         match = re.search(r"-?\d+(?:\.\d+)?", value)
         if not match:
             return False, field.fail_msg
@@ -107,6 +128,9 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
         has_cjk = bool(re.search(r"[\u4e00-\u9fff]", value))
         return has_letter and not has_cjk, field.fail_msg
 
+    if validator == "contains_english":
+        return bool(re.search(r"[A-Za-z]", value)), field.fail_msg
+
     if validator == "bilingual_text":
         has_letter = bool(re.search(r"[A-Za-z]", value))
         has_cjk = bool(re.search(r"[\u4e00-\u9fff]", value))
@@ -122,7 +146,15 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
     if validator == "name_not_place":
         compact = normalized_compact(value)
         blocked = [normalized_compact(str(item)) for item in params.get("not_allow", ["重庆", "渝", "chongqing"])]
-        return bool(compact) and compact not in blocked, field.fail_msg
+        if not compact or compact in blocked:
+            return False, field.fail_msg
+        upper = compact_text(value).upper()
+        if normalize_na(value) == "N/A" or is_date_like(value) or re.fullmatch(r"\d+(?:\.\d+)?", compact_text(value)):
+            return False, field.fail_msg
+        noise = {normalized_compact(item) for item in NAME_NOISE_VALUES}
+        if compact in noise or upper in NAME_NOISE_VALUES or looks_like_signature_label_noise(value):
+            return False, field.fail_msg
+        return bool(re.search(r"[\u4e00-\u9fffA-Za-z]", value)), field.fail_msg
 
     if validator == "prefix_or_exact":
         exact = normalized_compact(value).upper()
@@ -153,4 +185,44 @@ def validate(field: FieldSpec, recognition: RecognitionResult, now: str | None =
     if validator in {"present", "present_and_match", "exact_text_or_ocr_match"}:
         return bool(value), field.fail_msg
 
+    if validator == "optional":
+        return True, field.fail_msg
+
     return False, field.fail_msg
+
+
+def is_date_like(value: str) -> bool:
+    compact = compact_text(value)
+    return bool(
+        re.fullmatch(r"20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2}", compact)
+        or re.fullmatch(r"20\d{6}", compact)
+    )
+
+
+def normalize_int_range_value(field: FieldSpec, value: str) -> str:
+    text = normalize_text(value)
+    corrected = correct_oil_quantity_seven_to_two(field, text)
+    return corrected or text
+
+
+def correct_oil_quantity_seven_to_two(field: FieldSpec, value: str) -> str:
+    if field.id not in {"oil_eng1_qty", "oil_eng2_qty"}:
+        return ""
+    compact = compact_text(value)
+    if not re.fullmatch(r"7\d(?:\.\d+)?", compact):
+        return ""
+    try:
+        min_value = float(field.params["min"])
+        max_value = float(field.params["max"])
+        corrected = "2" + compact[1:]
+        number = float(corrected)
+    except (KeyError, TypeError, ValueError):
+        return ""
+    if min_value <= number <= max_value:
+        return corrected
+    return ""
+
+
+def looks_like_signature_label_noise(value: str) -> bool:
+    upper = normalize_text(value).upper()
+    return any(token in upper for token in ["S/N", "P/N", "AUTHORIZATION", "RELEASE", "STATION", "DATE"])
