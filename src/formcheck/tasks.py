@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sqlite3
 import threading
@@ -12,6 +13,7 @@ from typing import Any
 from fastapi import UploadFile
 
 from .config import OUT_DIR, OUTPUTS_DIR
+from .observability import current_request_id, log_event, log_exception, reset_context, set_context
 
 
 DB_PATH = OUTPUTS_DIR / "runtime" / "tasks.sqlite3"
@@ -44,12 +46,27 @@ def init_db(path: Path | None = None) -> None:
                 run_id TEXT NOT NULL,
                 upload_path TEXT NOT NULL,
                 report_path TEXT,
-                error TEXT
+                error TEXT,
+                updated_at REAL,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                lease_expires_at REAL,
+                request_id TEXT
             )
             """
         )
+        ensure_column(conn, "tasks", "updated_at", "REAL")
+        ensure_column(conn, "tasks", "attempt_count", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(conn, "tasks", "lease_expires_at", "REAL")
+        ensure_column(conn, "tasks", "request_id", "TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_session_created ON tasks(session_id, created_at DESC)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status_created ON tasks(status, created_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_lease ON tasks(status, lease_expires_at)")
+
+
+def ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in columns:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
@@ -64,6 +81,7 @@ def create_task(file: UploadFile, session_id: str, path: Path | None = None) -> 
     init_db(path)
     task_id = uuid.uuid4().hex[:12]
     run_id = task_id
+    normalized_session = normalize_session_id(session_id)
     run_dir = OUT_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     suffix = Path(file.filename or "upload.jpg").suffix or ".jpg"
@@ -76,21 +94,32 @@ def create_task(file: UploadFile, session_id: str, path: Path | None = None) -> 
         conn.execute(
             """
             INSERT INTO tasks (
-                task_id, session_id, filename, status, created_at, progress,
-                run_id, upload_path
-            ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?)
+                task_id, session_id, filename, status, created_at, updated_at, progress,
+                run_id, upload_path, request_id
+            ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)
             """,
             (
                 task_id,
-                normalize_session_id(session_id),
+                normalized_session,
                 file.filename or upload_path.name,
+                created_at,
                 created_at,
                 json.dumps(progress, ensure_ascii=False),
                 run_id,
                 str(upload_path),
+                current_request_id(),
             ),
         )
     task = get_task(task_id, path)
+    log_event(
+        "task.created",
+        task_id=task_id,
+        run_id=run_id,
+        session_id=normalized_session,
+        filename=task.get("filename"),
+        upload_path=str(upload_path),
+        size_bytes=upload_path.stat().st_size,
+    )
     start_worker()
     return task
 
@@ -137,46 +166,71 @@ def claim_next(path: Path | None = None) -> dict[str, Any] | None:
         now = time.time()
         progress = {"stage": "started", "status": "running"}
         conn.execute(
-            "UPDATE tasks SET status = 'running', started_at = ?, progress = ? WHERE task_id = ? AND status = 'pending'",
-            (now, json.dumps(progress, ensure_ascii=False), row["task_id"]),
+            """
+            UPDATE tasks
+            SET status = 'running',
+                started_at = ?,
+                updated_at = ?,
+                lease_expires_at = ?,
+                attempt_count = COALESCE(attempt_count, 0) + 1,
+                progress = ?
+            WHERE task_id = ? AND status = 'pending'
+            """,
+            (now, now, now + task_lease_seconds(), json.dumps(progress, ensure_ascii=False), row["task_id"]),
         )
         conn.execute("COMMIT")
-    return get_task(row["task_id"], path)
+    task = get_task(row["task_id"], path)
+    log_event(
+        "task.claimed",
+        task_id=task["task_id"],
+        run_id=task["run_id"],
+        session_id=task["session_id"],
+        filename=task.get("filename"),
+    )
+    return task
 
 
 def update_progress(task_id: str, progress: dict[str, Any], path: Path | None = None) -> None:
     init_db(path)
+    now = time.time()
     with connect(path) as conn:
         conn.execute(
-            "UPDATE tasks SET progress = ? WHERE task_id = ?",
-            (json.dumps(progress, ensure_ascii=False), task_id),
+            "UPDATE tasks SET progress = ?, updated_at = ?, lease_expires_at = ? WHERE task_id = ?",
+            (json.dumps(progress, ensure_ascii=False), now, now + task_lease_seconds(), task_id),
         )
+    log_event("task.progress", task_id=task_id, **progress)
 
 
 def finish_task(task_id: str, report_path: Path, path: Path | None = None) -> None:
     progress = {"stage": "final", "status": "done"}
+    now = time.time()
     with connect(path) as conn:
         conn.execute(
             """
             UPDATE tasks
-            SET status = 'done', finished_at = ?, progress = ?, report_path = ?, error = NULL
+            SET status = 'done', finished_at = ?, updated_at = ?, lease_expires_at = NULL,
+                progress = ?, report_path = ?, error = NULL
             WHERE task_id = ?
             """,
-            (time.time(), json.dumps(progress, ensure_ascii=False), str(report_path), task_id),
+            (now, now, json.dumps(progress, ensure_ascii=False), str(report_path), task_id),
         )
+    log_event("task.finished", task_id=task_id, report_path=str(report_path))
 
 
 def fail_task(task_id: str, error: str, path: Path | None = None) -> None:
     progress = {"stage": "error", "status": "failed", "error": error}
+    now = time.time()
     with connect(path) as conn:
         conn.execute(
             """
             UPDATE tasks
-            SET status = 'failed', finished_at = ?, progress = ?, error = ?
+            SET status = 'failed', finished_at = ?, updated_at = ?, lease_expires_at = NULL,
+                progress = ?, error = ?
             WHERE task_id = ?
             """,
-            (time.time(), json.dumps(progress, ensure_ascii=False), error, task_id),
+            (now, now, json.dumps(progress, ensure_ascii=False), error, task_id),
         )
+    log_event("task.failed", "error", task_id=task_id, error=error)
 
 
 def row_to_task(row: sqlite3.Row) -> dict[str, Any]:
@@ -197,7 +251,44 @@ def start_worker() -> None:
         if _worker_active:
             return
         _worker_active = True
+    log_event("task.worker.start")
     threading.Thread(target=worker_loop, daemon=True).start()
+
+
+def recover_stale_tasks(path: Path | None = None) -> int:
+    init_db(path)
+    now = time.time()
+    progress = {
+        "stage": "pending",
+        "status": "pending",
+        "reason": "recovered_stale_running_task",
+    }
+    with connect(path) as conn:
+        cursor = conn.execute(
+            """
+            UPDATE tasks
+            SET status = 'pending',
+                updated_at = ?,
+                lease_expires_at = NULL,
+                progress = ?,
+                error = NULL
+            WHERE status = 'running'
+              AND (lease_expires_at IS NULL OR lease_expires_at < ?)
+            """,
+            (now, json.dumps(progress, ensure_ascii=False), now),
+        )
+    count = int(cursor.rowcount or 0)
+    if count:
+        log_event("task.recovered_stale", count=count)
+    return count
+
+
+def task_lease_seconds() -> int:
+    try:
+        value = int(os.getenv("TASK_LEASE_SECONDS", "1800"))
+    except ValueError:
+        return 1800
+    return max(60, min(value, 24 * 60 * 60))
 
 
 def worker_loop() -> None:
@@ -206,8 +297,12 @@ def worker_loop() -> None:
         while True:
             task = claim_next()
             if task is None:
+                log_event("task.worker.idle")
                 return
             process_claimed_task(task)
+    except Exception as exc:  # noqa: BLE001
+        log_exception("task.worker.exception", exc)
+        raise
     finally:
         with _worker_lock:
             _worker_active = False
@@ -216,6 +311,7 @@ def worker_loop() -> None:
 def process_claimed_task(task: dict[str, Any]) -> None:
     assert _processor is not None
     task_id = task["task_id"]
+    tokens = set_context(task_id=task_id, run_id=task["run_id"], session_id=task["session_id"])
 
     def progress_cb(stage: str, status: str, **extra) -> None:
         update_progress(task_id, {"stage": stage, "status": status, **extra})
@@ -225,4 +321,7 @@ def process_claimed_task(task: dict[str, Any]) -> None:
         report_path = OUT_DIR / task["run_id"] / "report.json"
         finish_task(task_id, report_path)
     except Exception as exc:  # noqa: BLE001
+        log_exception("task.exception", exc)
         fail_task(task_id, str(exc))
+    finally:
+        reset_context(tokens)

@@ -4,6 +4,7 @@ import base64
 import io
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ from PIL import Image
 import requests
 
 from .config import provider_config
+from .observability import log_event
 from .schemas import FieldSpec, RecognitionResult
 
 
@@ -83,6 +85,7 @@ def field_specific_hint(field: FieldSpec) -> str:
 def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, model: str | None = None) -> RecognitionResult:
     cfg = provider_config(provider)
     if provider == "mock" or not cfg.api_key:
+        log_event("vlm.skipped", provider=cfg.name, model=cfg.model, field_id=field.id, reason="mock_or_missing_key")
         return RecognitionResult(value="", normalized_value="", confidence=0.0, provider=cfg.name, model=cfg.model)
     selected_model = model or cfg.model
     url = cfg.base_url.rstrip("/") + "/chat/completions"
@@ -100,13 +103,23 @@ def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, mod
         "temperature": 0,
     }
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
+    started = time.time()
     try:
         timeout = request_timeout_seconds()
+        log_event("vlm.request.start", provider=cfg.name, model=selected_model, field_id=field.id, label=field.label, timeout_seconds=timeout)
         resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
         parsed = _parse_json_content(content)
+        log_event(
+            "vlm.request.done",
+            provider=cfg.name,
+            model=selected_model,
+            field_id=field.id,
+            duration_ms=int((time.time() - started) * 1000),
+            has_value=bool(parsed.get("value") or parsed.get("normalized_value")),
+        )
         return RecognitionResult(
             value=str(parsed.get("value", "")),
             normalized_value=str(parsed.get("normalized_value") or parsed.get("value", "")),
@@ -116,6 +129,16 @@ def recognize_with_provider(field: FieldSpec, roi_path: Path, provider: str, mod
             raw={"content": content, "usage": data.get("usage")},
         )
     except Exception as exc:
+        log_event(
+            "vlm.request.failed",
+            "error",
+            provider=cfg.name,
+            model=selected_model,
+            field_id=field.id,
+            duration_ms=int((time.time() - started) * 1000),
+            error=str(exc),
+            timeout_seconds=request_timeout_seconds(),
+        )
         return RecognitionResult(
             value="",
             normalized_value="",

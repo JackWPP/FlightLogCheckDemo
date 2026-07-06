@@ -76,6 +76,49 @@ def test_failed_reviewable_field_is_marked_waiting_for_roi(tmp_path, monkeypatch
     assert result["review_reason"] == "规则失败，等待ROI复核"
 
 
+def test_ocr_progress_does_not_embed_full_blocks(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("formcheck.pipeline.OUT_DIR", tmp_path / "out")
+    field = FieldSpec(
+        id="test_field",
+        label="字段",
+        section="test",
+        bbox=(0, 0, 100, 50),
+        recognizer="keyed_text",
+        validator="present",
+        params={},
+        fail_msg="字段缺失",
+    )
+    block = OcrBlock("b1", "value", 0.99, (0, 0, 40, 20), (20, 10))
+    monkeypatch.setattr("formcheck.pipeline.load_fields", lambda _path: ({"width": 100, "height": 50}, [field]))
+
+    def fake_hybrid(*_args, **_kwargs):
+        return {
+            "cleaned_results": {
+                field.id: RecognitionResult(value="value", normalized_value="value", provider="test", model="test")
+            },
+            "public": {"ok": True, "blocks": [{"id": "b1", "text": "value"}], "timings": {}, "cleaner_model": "test"},
+            "ocr_image_path": None,
+            "blocks": [block],
+            "assignments": {},
+        }
+
+    events = []
+    monkeypatch.setattr("formcheck.pipeline.run_hybrid_ocr", fake_hybrid)
+    monkeypatch.setattr("formcheck.pipeline.triage_issues", lambda fields, **_kwargs: {
+        "problems": ["通过"],
+        "all_problems": [],
+        "issue_triage": {"provider": "local"},
+    })
+    image = tmp_path / "upload.jpg"
+    cv2.imwrite(str(image), np.full((30, 40, 3), 255, dtype=np.uint8))
+
+    analyze_image(image, run_id="progress-test", progress_cb=lambda *args, **kwargs: events.append((args, kwargs)))
+    ocr_done = [kwargs for args, kwargs in events if args == ("ocr", "done")][0]
+
+    assert ocr_done["blocks"] == 1
+    assert "ocr_blocks" not in ocr_done
+
+
 def test_dense_numeric_fields_with_close_candidates_are_marked_for_review() -> None:
     field = FieldSpec(
         id="apu_cum_cycles",

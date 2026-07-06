@@ -20,6 +20,7 @@ from .image_io import imread, imwrite
 from .issue_triage import triage_issues
 from .llm_cleaner import DEFAULT_CLEANER_MODEL, clean_field_values_with_meta
 from .model_adapters import recognize_with_provider
+from .observability import log_event
 from .ppocr_pipeline import block_to_dict, run_ppocrv6
 from .recognizers import mock_recognize
 from .registration import load_template, register, save_registration_summary
@@ -45,13 +46,15 @@ def analyze_image(
     progress_cb: ProgressCB = None,
 ) -> dict:
     def emit(stage: str, status: str, **extra) -> None:
+        log_event(f"pipeline.{stage}.{status}", run_id=run_id, stage=stage, status=status, **extra)
         if progress_cb is not None:
             try:
                 progress_cb(stage, status, **extra)
             except Exception:
                 # Never let a buggy progress sink break the pipeline.
-                pass
+                log_event("pipeline.progress_callback_failed", "warning", run_id=run_id, stage=stage, status=status)
 
+    log_event("pipeline.start", run_id=run_id, image_path=str(image_path), mode=mode, provider=provider, model=model, cleaner_provider=cleaner_provider, cleaner_model=cleaner_model)
     run_dir = OUT_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     canonical, fields = load_fields(FIELDS_PATH)
@@ -71,7 +74,6 @@ def analyze_image(
          blocks=blocks_count,
          cache_hit=ocr_meta["public"].get("cache_hit"),
          ocr_image_url=ocr_meta["public"].get("ocr_image_url"),
-         ocr_blocks=ocr_meta["public"].get("blocks") or [],
          error=ocr_meta["public"].get("error"))
     timings["ocr_ms"] = int((time.time() - t) * 1000)
     timings.update(ocr_meta["public"].get("timings") or {})
@@ -228,6 +230,15 @@ def analyze_image(
     }
     (run_dir / "report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    log_event(
+        "pipeline.done",
+        run_id=run_id,
+        ok=report["ok"],
+        total_ms=report["timings"]["total_ms"],
+        failed_count=report["summary"]["failed_count"],
+        review_count=report["summary"]["review_count"],
+        ocr_ok=report["summary"]["ocr_ok"],
     )
     return report
 

@@ -104,6 +104,22 @@ fields.yaml             字段、ROI、规则和候选归属配置
 
 任务队列数据保存在 `outputs/runtime/tasks.sqlite3`，PP-OCR、Cleaner 和 ROI/VLM 复核分别缓存在 `outputs/runtime/ocr_cache/`、`outputs/runtime/cleaner_cache/`、`outputs/runtime/roi_review_cache/`。同一张图重复上传时会尽量复用缓存。
 
+## 线上排错
+
+后端会输出结构化 JSONL 日志，默认位置：
+
+```text
+outputs/runtime/logs/app.jsonl
+```
+
+单个任务排错时，先从 UI 任务卡片或 `/api/tasks?session_id=...` 拿到 `task_id`，再访问：
+
+```text
+/api/tasks/<task_id>/logs
+```
+
+日志会按 `request_id / task_id / run_id / session_id` 串起 HTTP 请求、任务队列、PP-OCR、Cleaner、ROI-VLM 和 pipeline 阶段。详细说明见 [`docs/operations_logging.md`](docs/operations_logging.md)。
+
 ## 测试
 
 ```powershell

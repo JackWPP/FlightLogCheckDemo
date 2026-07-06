@@ -13,6 +13,7 @@ import requests
 
 from .config import FIELDS_PATH, OUTPUTS_DIR, provider_config
 from .field_assignment import candidates_to_json, looks_like_form_label_text
+from .observability import log_event
 from .schemas import FieldCandidate, FieldSpec, RecognitionResult
 from .validators import compact_text, normalize_date, normalize_exact_value, normalize_na, normalize_regex_value, today_str
 
@@ -42,6 +43,7 @@ def clean_field_values_with_meta(
     selected_model = model or os.getenv("CLEANER_MODEL") or DEFAULT_CLEANER_MODEL
     fallback = fallback_clean(fields, assignments, cfg.name, selected_model)
     if not cfg.api_key:
+        log_event("cleaner.skipped", provider=cfg.name, model=selected_model, reason="missing_api_key")
         return fallback, {
             "provider": cfg.name,
             "model": selected_model,
@@ -53,6 +55,7 @@ def clean_field_values_with_meta(
 
     section_fields = cleaner_sections(fields, assignments)
     if not section_fields:
+        log_event("cleaner.skipped", provider=cfg.name, model=selected_model, reason="no_candidate_sections")
         return fallback, {
             "provider": cfg.name,
             "model": selected_model,
@@ -75,6 +78,14 @@ def clean_field_values_with_meta(
         "fallback_sections": [],
     }
     max_workers = min(cleaner_section_concurrency(), len(section_fields))
+    log_event(
+        "cleaner.start",
+        provider=cfg.name,
+        model=selected_model,
+        sections=list(section_fields.keys()),
+        max_workers=max_workers,
+        total_budget_seconds=cleaner_total_budget_seconds(),
+    )
     executor = ThreadPoolExecutor(max_workers=max_workers)
     futures = {
         executor.submit(clean_section_values, section, section_subset, assignments, cfg, selected_model, fallback): section
@@ -86,6 +97,7 @@ def clean_field_values_with_meta(
             try:
                 section_results, section_meta = future.result()
             except Exception as exc:  # noqa: BLE001
+                log_event("cleaner.section.exception", "error", section=section, error=f"{type(exc).__name__}: {exc}")
                 section_results, section_meta = section_fallback(
                     section, section_fields[section], fallback, cfg.name, selected_model, f"{type(exc).__name__}: {exc}"
                 )
@@ -93,11 +105,13 @@ def clean_field_values_with_meta(
             merge_section_meta(meta, section, section_meta)
     except TimeoutError:
         meta["error"] = "cleaner_total_budget_exceeded"
+        log_event("cleaner.timeout", "error", total_budget_seconds=cleaner_total_budget_seconds())
     finally:
         for future, section in futures.items():
             if future.done():
                 continue
             future.cancel()
+            log_event("cleaner.section.cancelled", "warning", section=section, reason="cleaner_total_budget_exceeded")
             section_results, section_meta = section_fallback(
                 section,
                 section_fields[section],
@@ -123,6 +137,16 @@ def clean_field_values_with_meta(
             for section in meta["fallback_sections"]
         )
     meta["cache_hit"] = bool(meta["section_cache_hits"]) and all(meta["section_cache_hits"].values())
+    log_event(
+        "cleaner.done",
+        provider=cfg.name,
+        model=selected_model,
+        duration_ms=meta["duration_ms"],
+        cache_hit=meta["cache_hit"],
+        fallback_sections=meta["fallback_sections"],
+        section_timings=meta["section_timings"],
+        error=meta.get("error"),
+    )
     return results, meta
 
 
@@ -139,6 +163,7 @@ def clean_section_values(
     cache_dir = OUTPUTS_DIR / "runtime" / "cleaner_cache" / cache_key
     cached = load_cleaner_cache(cache_dir, fields)
     if cached:
+        log_event("cleaner.section.cache_hit", section=section, provider=cfg.name, model=selected_model, fields=len(fields))
         return cached, {
             "provider": cfg.name,
             "model": selected_model,
@@ -156,6 +181,14 @@ def clean_section_values(
     }
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
     try:
+        log_event(
+            "cleaner.section.start",
+            section=section,
+            provider=cfg.name,
+            model=selected_model,
+            fields=len(fields),
+            timeout_seconds=cleaner_section_timeout_seconds(),
+        )
         response = requests.post(
             cfg.base_url.rstrip("/") + "/chat/completions",
             headers=headers,
@@ -168,6 +201,7 @@ def clean_section_values(
         parsed = parse_json_content(content)
         cleaned = parsed.get("fields", parsed)
         if not isinstance(cleaned, dict):
+            log_event("cleaner.section.invalid_response", "warning", section=section)
             return section_fallback(section, fields, fallback, cfg.name, selected_model, "invalid_cleaner_response")
         results = {field.id: fallback[field.id] for field in fields}
         for field in fields:
@@ -198,6 +232,14 @@ def clean_section_values(
                 review_reason=str(item.get("reason") or ""),
             )
         save_cleaner_cache(cache_dir, results)
+        log_event(
+            "cleaner.section.done",
+            section=section,
+            provider=cfg.name,
+            model=selected_model,
+            duration_ms=int((time.time() - started) * 1000),
+            usage=data.get("usage"),
+        )
         return results, {
             "provider": cfg.name,
             "model": selected_model,
@@ -207,6 +249,15 @@ def clean_section_values(
             "usage": data.get("usage"),
         }
     except Exception as exc:
+        log_event(
+            "cleaner.section.failed",
+            "error",
+            section=section,
+            provider=cfg.name,
+            model=selected_model,
+            duration_ms=int((time.time() - started) * 1000),
+            error=str(exc),
+        )
         results, meta = section_fallback(section, fields, fallback, cfg.name, selected_model, str(exc), started)
         save_cleaner_cache(cache_dir, results, meta={"timeout_cached_at": int(time.time()), "section": section})
         meta["fallback_cached"] = True

@@ -11,6 +11,7 @@ from typing import Any
 import requests
 
 from .config import OUTPUTS_DIR, load_dotenv
+from .observability import log_event, log_exception
 from .paddleocr_aistudio import default_optional_payload, download_jsonl, poll_job, submit_job, token_from_env
 from .schemas import OcrBlock
 
@@ -27,6 +28,7 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
     if ppocr_cache_enabled():
         cached = load_ppocr_cache(cache_dir, out_dir)
         if cached:
+            log_event("ppocr.cache_hit", cache_dir=str(cache_dir), blocks=len(cached.get("blocks") or []))
             cached["timings"] = {
                 "ppocr_submit_ms": 0,
                 "ppocr_poll_ms": 0,
@@ -36,6 +38,7 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
             }
             return cached
     if not token:
+        log_event("ppocr.missing_token", "warning")
         return {
             "ok": False,
             "error": "Missing PADDLEOCR_AISTUDIO_TOKEN in .env",
@@ -52,11 +55,15 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
 
     try:
         t = time.time()
+        log_event("ppocr.submit.start", model="PP-OCRv6", use_doc_unwarping=use_doc_unwarping)
         job_id = submit_job(str(image_path), token, "PP-OCRv6", optional_payload)
         timings["ppocr_submit_ms"] = int((time.time() - t) * 1000)
+        log_event("ppocr.submit.done", job_id=job_id, duration_ms=timings["ppocr_submit_ms"])
         t = time.time()
+        log_event("ppocr.poll.start", job_id=job_id, interval_seconds=ppocr_poll_interval(), max_wait_seconds=ppocr_max_wait())
         job = poll_job(token, job_id, interval=ppocr_poll_interval(), max_wait=ppocr_max_wait())
         timings["ppocr_poll_ms"] = int((time.time() - t) * 1000)
+        log_event("ppocr.poll.done", job_id=job_id, ok=job.ok, state=job.state, duration_ms=timings["ppocr_poll_ms"], error=job.error)
         job_meta = {
             "ok": job.ok,
             "job_id": job.job_id,
@@ -75,6 +82,7 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
             return {"ok": False, "error": job.error or job.state or "ppocr_job_failed", "blocks": [], "ocr_image_url": None, "timings": timings}
 
         t = time.time()
+        log_event("ppocr.download.start", job_id=job_id)
         records = download_jsonl(job.json_url)
         (out_dir / "result.jsonl").write_text(
             "\n".join(json.dumps(record, ensure_ascii=False) for record in records),
@@ -88,6 +96,7 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
         (out_dir / "ocr_blocks.json").write_text(json.dumps(blocks_json, ensure_ascii=False, indent=2), encoding="utf-8")
         timings["ppocr_extract_ms"] = int((time.time() - t) * 1000)
         timings["ppocr_total_ms"] = int((time.time() - started) * 1000)
+        log_event("ppocr.done", job_id=job_id, blocks=len(blocks), duration_ms=timings["ppocr_total_ms"])
         if ppocr_cache_enabled():
             save_ppocr_cache(cache_dir, blocks_json, image_paths[0] if image_paths else None, job_meta)
         return {
@@ -102,6 +111,7 @@ def run_ppocrv6(image_path: Path, run_dir: Path, use_doc_unwarping: bool = True)
             "timings": timings,
         }
     except Exception as exc:
+        log_exception("ppocr.exception", exc)
         (out_dir / "error.json").write_text(json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2), encoding="utf-8")
         timings.setdefault("ppocr_submit_ms", 0)
         timings.setdefault("ppocr_poll_ms", 0)

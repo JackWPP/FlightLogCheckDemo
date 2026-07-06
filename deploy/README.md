@@ -143,6 +143,8 @@ docker compose down
 | 容器状态 | `docker compose ps` |
 | 实时日志（app） | `docker compose logs -f app` |
 | 实时日志（nginx） | `docker compose logs -f nginx` |
+| 结构化日志文件 | `outputs/runtime/logs/app.jsonl` |
+| 单任务日志 | `curl http://localhost:9080/api/tasks/<task_id>/logs` |
 | 进入容器排错 | `docker compose exec app bash` |
 | 占用 | `docker stats` |
 | 清理旧镜像 | `docker image prune -f` |
@@ -151,7 +153,7 @@ docker compose down
 ## 9. 常见问题
 
 **Q：上传图片后页面一直"核查中"，但服务没崩？**
-A：大概率 PP-OCRv6 / VLM 那一头在排队。先看该次 `out/<run_id>/report.json` 里的 `timings`，确认是 `ppocr_poll_ms`、`cleaner_ms`、`review_ms` 还是 `issue_triage_ms` 慢；再看 `docker compose logs app` 里有没有 4xx/5xx。重复上传同一张图时应看到 `summary.ocr_cache_hit=true`。如果 `review_ms` 拖尾，可以临时把 `VLM_REQUEST_TIMEOUT_SECONDS` 调到 20-30，或把 `ROI_REVIEW_CONCURRENCY` 调到 1-2 降低供应商限流风险。
+A：大概率 PP-OCRv6 / VLM 那一头在排队。先从页面任务卡片拿 `task_id`，看 `curl http://localhost:9080/api/tasks/<task_id>/logs`，确认慢点是 `ppocr.poll.done`、`cleaner.section.*` 还是 `vlm.request.*`；也可以看该次 `out/<run_id>/report.json` 里的 `timings`。重复上传同一张图时应看到 `summary.ocr_cache_hit=true` 或日志里的 `ppocr.cache_hit`。如果 `review_ms` 拖尾，可以临时把 `VLM_REQUEST_TIMEOUT_SECONDS` 调到 20-30，或把 `ROI_REVIEW_CONCURRENCY` 调到 1-2 降低供应商限流风险。
 
 **Q：访问 `/api/demo` 返回 200，但前端图表是空白？**
 A：浏览器开发者工具看 Network 里 `/outputs/demo_sample/...` 是不是 404。是的话说明 demo 缓存没打进镜像——重新 `docker compose build --no-cache` 试试。

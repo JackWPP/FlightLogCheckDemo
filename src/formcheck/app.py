@@ -6,11 +6,12 @@ import os
 import queue
 import shutil
 import threading
+import time
 import traceback
 import uuid
 from pathlib import Path
 
-from fastapi import File, Form, HTTPException, Query, UploadFile
+from fastapi import File, Form, HTTPException, Query, Request, UploadFile
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import ASSETS_DIR, OUT_DIR, OUTPUTS_DIR, ROOT
 from .demo import demo_payload, ensure_demo_sample
 from .llm_cleaner import DEFAULT_CLEANER_MODEL
+from .observability import configure_logging, log_event, log_exception, read_recent_logs, reset_context, set_context
 from .pipeline import analyze_image, registration_mode
 from . import tasks
 
@@ -33,9 +35,44 @@ app.mount("/outputs", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
 
 @app.on_event("startup")
 def startup() -> None:
+    configure_logging()
+    log_event("app.startup", service="flight-log-check")
     tasks.init_db()
+    tasks.recover_stale_tasks()
     tasks.configure_processor(_process_task)
     tasks.start_worker()
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
+    tokens = set_context(request_id=request_id)
+    started = time.time()
+    try:
+        response = await call_next(request)
+        duration_ms = int((time.time() - started) * 1000)
+        response.headers["x-request-id"] = request_id
+        log_event(
+            "http.request",
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            client=request.client.host if request.client else "",
+        )
+        return response
+    except Exception as exc:  # noqa: BLE001
+        log_exception(
+            "http.exception",
+            exc,
+            method=request.method,
+            path=request.url.path,
+            duration_ms=int((time.time() - started) * 1000),
+            client=request.client.host if request.client else "",
+        )
+        raise
+    finally:
+        reset_context(tokens)
 
 
 @app.get("/")
@@ -111,30 +148,48 @@ def _save_upload(file: UploadFile) -> tuple[str, Path]:
     upload_path = run_dir / f"upload{suffix}"
     with upload_path.open("wb") as fh:
         shutil.copyfileobj(file.file, fh)
+    log_event("upload.saved", run_id=run_id, filename=file.filename or upload_path.name, size_bytes=upload_path.stat().st_size)
     return run_id, upload_path
 
 
 def _process_task(task: dict, progress_cb) -> dict:
+    tokens = set_context(task_id=task["task_id"], run_id=task["run_id"], session_id=task["session_id"])
+    started = time.time()
     cfg = _public_config()
-    upload_path = Path(task["upload_path"])
-    report = analyze_image(
-        upload_path,
-        provider=cfg["roi_provider"],
-        model=cfg["roi_model"] or None,
-        run_id=task["run_id"],
-        mode=cfg["mode"],
-        cleaner_provider=cfg["cleaner_provider"],
-        cleaner_model=cfg["cleaner_model"],
-        progress_cb=progress_cb,
-    )
-    report["run_id"] = task["run_id"]
-    report["task_id"] = task["task_id"]
-    report["session_id"] = task["session_id"]
-    report["upload_url"] = f"/runs/{task['run_id']}/{Path(task['upload_path']).name}"
-    (OUT_DIR / task["run_id"] / "report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    return report
+    try:
+        log_event("task.process.start", filename=task.get("filename"), mode=cfg["mode"])
+        upload_path = Path(task["upload_path"])
+        report = analyze_image(
+            upload_path,
+            provider=cfg["roi_provider"],
+            model=cfg["roi_model"] or None,
+            run_id=task["run_id"],
+            mode=cfg["mode"],
+            cleaner_provider=cfg["cleaner_provider"],
+            cleaner_model=cfg["cleaner_model"],
+            progress_cb=progress_cb,
+        )
+        report["run_id"] = task["run_id"]
+        report["task_id"] = task["task_id"]
+        report["session_id"] = task["session_id"]
+        report["upload_url"] = f"/runs/{task['run_id']}/{Path(task['upload_path']).name}"
+        (OUT_DIR / task["run_id"] / "report.json").write_text(
+            json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        log_event(
+            "task.process.done",
+            duration_ms=int((time.time() - started) * 1000),
+            ok=report.get("ok"),
+            failed_count=(report.get("summary") or {}).get("failed_count"),
+            review_count=(report.get("summary") or {}).get("review_count"),
+            total_ms=(report.get("timings") or {}).get("total_ms"),
+        )
+        return report
+    except Exception as exc:  # noqa: BLE001
+        log_exception("task.process.exception", exc, duration_ms=int((time.time() - started) * 1000))
+        raise
+    finally:
+        reset_context(tokens)
 
 
 @app.post("/api/analyze")
@@ -156,18 +211,35 @@ def analyze(
     resolved_cleaner_model = cleaner_model or cfg["cleaner_model"]
 
     run_id, upload_path = _save_upload(file)
-    report = analyze_image(
-        upload_path,
+    tokens = set_context(run_id=run_id)
+    log_event(
+        "analyze.start",
+        filename=file.filename,
+        mode=resolved_mode,
         provider=resolved_provider,
         model=resolved_model,
-        run_id=run_id,
-        mode=resolved_mode,
         cleaner_provider=resolved_cleaner_provider,
         cleaner_model=resolved_cleaner_model,
     )
-    report["run_id"] = run_id
-    report["upload_url"] = f"/runs/{run_id}/{upload_path.name}"
-    return report
+    try:
+        report = analyze_image(
+            upload_path,
+            provider=resolved_provider,
+            model=resolved_model,
+            run_id=run_id,
+            mode=resolved_mode,
+            cleaner_provider=resolved_cleaner_provider,
+            cleaner_model=resolved_cleaner_model,
+        )
+        report["run_id"] = run_id
+        report["upload_url"] = f"/runs/{run_id}/{upload_path.name}"
+        log_event("analyze.done", ok=report.get("ok"), total_ms=(report.get("timings") or {}).get("total_ms"))
+        return report
+    except Exception as exc:  # noqa: BLE001
+        log_exception("analyze.exception", exc)
+        raise
+    finally:
+        reset_context(tokens)
 
 
 @app.post("/api/tasks")
@@ -199,6 +271,16 @@ def get_task(task_id: str) -> dict:
         return {"task": tasks.get_task(task_id)}
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="task_not_found") from exc
+
+
+@app.get("/api/tasks/{task_id}/logs")
+def task_logs(task_id: str, limit: int = Query(200, ge=1, le=1000)) -> dict:
+    try:
+        task = tasks.get_task(task_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="task_not_found") from exc
+    logs = read_recent_logs(task_id=task_id, run_id=task.get("run_id"), limit=limit)
+    return {"task_id": task_id, "logs": logs}
 
 
 @app.get("/api/tasks/{task_id}/events")
@@ -257,6 +339,8 @@ async def analyze_stream(file: UploadFile = File(...)) -> StreamingResponse:
                 pass
 
         try:
+            tokens = set_context(run_id=run_id)
+            log_event("analyze_stream.start", upload_url=f"/runs/{run_id}/{upload_path.name}")
             report = analyze_image(
                 upload_path,
                 provider=cfg["roi_provider"],
@@ -269,14 +353,18 @@ async def analyze_stream(file: UploadFile = File(...)) -> StreamingResponse:
             )
             report["run_id"] = run_id
             report["upload_url"] = f"/runs/{run_id}/{upload_path.name}"
+            log_event("analyze_stream.done", ok=report.get("ok"), total_ms=(report.get("timings") or {}).get("total_ms"))
             q.put_nowait({"stage": "final", "report": report})
         except Exception as exc:  # noqa: BLE001
+            log_exception("analyze_stream.exception", exc)
             q.put_nowait({
                 "stage": "error",
                 "error": str(exc),
                 "trace": traceback.format_exc(limit=5),
             })
         finally:
+            if "tokens" in locals():
+                reset_context(tokens)
             q.put_nowait(None)  # sentinel -> end of stream
 
     threading.Thread(target=run_pipeline, daemon=True).start()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
+import time
 
 from formcheck import tasks
 
@@ -36,3 +37,30 @@ def test_task_lifecycle_and_claim_is_unique(tmp_path, monkeypatch) -> None:
     assert done["status"] == "done"
     assert done["report"] == {"ok": True}
     assert tasks.list_tasks("session-1", db_path)[0]["task_id"] == claimed["task_id"]
+
+
+def test_recover_stale_running_task_returns_it_to_pending(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "tasks.sqlite3"
+    monkeypatch.setattr(tasks, "OUT_DIR", tmp_path / "out")
+    monkeypatch.setattr(tasks, "DB_PATH", db_path)
+    monkeypatch.setattr(tasks, "_processor", None)
+    monkeypatch.setenv("TASK_LEASE_SECONDS", "60")
+
+    created = tasks.create_task(DummyUpload(), "session-1", db_path)
+    claimed = tasks.claim_next(db_path)
+    assert claimed is not None
+
+    stale_time = time.time() - 120
+    with tasks.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE tasks SET lease_expires_at = ?, updated_at = ? WHERE task_id = ?",
+            (stale_time, stale_time, claimed["task_id"]),
+        )
+
+    recovered = tasks.recover_stale_tasks(db_path)
+    task = tasks.get_task(created["task_id"], db_path)
+
+    assert recovered == 1
+    assert task["status"] == "pending"
+    assert task["progress"]["reason"] == "recovered_stale_running_task"
+    assert task["error"] is None
